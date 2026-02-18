@@ -7,6 +7,11 @@ import structlog
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 
+from .validation import (
+    validate_customer_id, validate_enum, validate_image_path,
+    ASSET_TYPES, ValidationError,
+)
+
 logger = structlog.get_logger(__name__)
 
 
@@ -41,19 +46,25 @@ class AssetTools:
             # Set asset name
             asset.name = name
             
-            # Handle image data (assume base64 encoded for now)
+            customer_id = validate_customer_id(customer_id)
+
+            # Handle image data - accept base64 or validated image file path
             try:
-                # If it's a base64 string, decode it
                 if image_data.startswith('data:image'):
-                    # Remove data URL prefix
                     image_data = image_data.split(',')[1]
-                
                 image_bytes = base64.b64decode(image_data)
             except Exception:
-                # If decoding fails, assume it's a file path and read it
+                # Not valid base64 - try as a validated file path
                 try:
-                    with open(image_data, 'rb') as f:
+                    validated_path = validate_image_path(image_data)
+                    with open(validated_path, 'rb') as f:
                         image_bytes = f.read()
+                except ValidationError as ve:
+                    return {
+                        "success": False,
+                        "error": f"Invalid image input: {str(ve)}. Provide base64-encoded image data or a valid image file path.",
+                        "error_type": "ValidationError"
+                    }
                 except Exception as e:
                     return {
                         "success": False,
@@ -195,7 +206,7 @@ class AssetTools:
             
             # Add type filter if specified
             if asset_type:
-                asset_type_upper = asset_type.upper()
+                asset_type_upper = validate_enum(asset_type, ASSET_TYPES, "asset_type")
                 query += f" WHERE asset.type = {asset_type_upper}"
                 
             response = googleads_service.search(

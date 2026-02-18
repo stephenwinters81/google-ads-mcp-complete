@@ -706,17 +706,21 @@ class GoogleAdsTools:
         """Execute a tool by name."""
         if name not in self._tools_registry:
             raise ValueError(f"Unknown tool: {name}")
-            
+
         tool_config = self._tools_registry[name]
         handler = tool_config["handler"]
-        
+
         # Validate required parameters
         for param, config in tool_config["parameters"].items():
             if config.get("required", False) and param not in arguments:
                 raise ValueError(f"Missing required parameter: {param}")
-                
+
+        # Filter arguments to only include declared parameters
+        declared_params = set(tool_config["parameters"].keys())
+        filtered_arguments = {k: v for k, v in arguments.items() if k in declared_params}
+
         # Execute the handler
-        return await handler(**arguments)
+        return await handler(**filtered_arguments)
         
     # Account Management Methods
     

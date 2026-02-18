@@ -6,6 +6,11 @@ import structlog
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 
+from .validation import (
+    validate_customer_id, validate_numeric_id, validate_enum,
+    EXTENSION_TYPES, ValidationError,
+)
+
 logger = structlog.get_logger(__name__)
 
 
@@ -23,13 +28,15 @@ class ExtensionTools:
         sitelinks: List[Dict[str, str]]
     ) -> Dict[str, Any]:
         """Create sitelink extensions for a campaign.
-        
+
         Args:
             customer_id: The customer ID
             campaign_id: The campaign ID
             sitelinks: List of sitelinks with 'text', 'url' and optional 'description1', 'description2'
         """
         try:
+            customer_id = validate_customer_id(customer_id)
+            campaign_id = validate_numeric_id(campaign_id, "campaign_id")
             client = self.auth_manager.get_client(customer_id)
             asset_service = client.get_service("AssetService")
             campaign_asset_service = client.get_service("CampaignAssetService")
@@ -111,13 +118,15 @@ class ExtensionTools:
         callouts: List[str]
     ) -> Dict[str, Any]:
         """Create callout extensions for a campaign.
-        
+
         Args:
             customer_id: The customer ID
-            campaign_id: The campaign ID  
+            campaign_id: The campaign ID
             callouts: List of callout text strings
         """
         try:
+            customer_id = validate_customer_id(customer_id)
+            campaign_id = validate_numeric_id(campaign_id, "campaign_id")
             client = self.auth_manager.get_client(customer_id)
             asset_service = client.get_service("AssetService")
             campaign_asset_service = client.get_service("CampaignAssetService")
@@ -192,7 +201,7 @@ class ExtensionTools:
         structured_snippets: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Create structured snippet extensions for a campaign.
-        
+
         Args:
             customer_id: The customer ID
             campaign_id: The campaign ID
@@ -200,6 +209,8 @@ class ExtensionTools:
                 Example: [{"header": "Services", "values": ["Web Design", "SEO", "PPC"]}]
         """
         try:
+            customer_id = validate_customer_id(customer_id)
+            campaign_id = validate_numeric_id(campaign_id, "campaign_id")
             client = self.auth_manager.get_client(customer_id)
             asset_service = client.get_service("AssetService")
             campaign_asset_service = client.get_service("CampaignAssetService")
@@ -339,7 +350,7 @@ class ExtensionTools:
         call_only: bool = False
     ) -> Dict[str, Any]:
         """Create call extensions for a campaign.
-        
+
         Args:
             customer_id: The customer ID
             campaign_id: The campaign ID
@@ -348,6 +359,8 @@ class ExtensionTools:
             call_only: Whether this is call-only (default: False)
         """
         try:
+            customer_id = validate_customer_id(customer_id)
+            campaign_id = validate_numeric_id(campaign_id, "campaign_id")
             client = self.auth_manager.get_client(customer_id)
             extension_feed_item_service = client.get_service("ExtensionFeedItemService")
             
@@ -396,16 +409,21 @@ class ExtensionTools:
         extension_type: Optional[str] = None
     ) -> Dict[str, Any]:
         """List extensions for a campaign or account.
-        
+
         Args:
             customer_id: The customer ID
             campaign_id: Optional campaign ID to filter by
             extension_type: Optional extension type (SITELINK, CALLOUT, CALL, etc.)
         """
         try:
+            customer_id = validate_customer_id(customer_id)
+            if campaign_id:
+                campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            if extension_type:
+                extension_type = validate_enum(extension_type, EXTENSION_TYPES, "extension_type")
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
-            
+
             query = """
                 SELECT
                     extension_feed_item.resource_name,
@@ -423,13 +441,13 @@ class ExtensionTools:
                     campaign.id
                 FROM extension_feed_item
             """
-            
+
             conditions = []
             if campaign_id:
                 conditions.append(f"campaign.id = {campaign_id}")
             if extension_type:
-                conditions.append(f"extension_feed_item.extension_type = '{extension_type.upper()}'")
-            
+                conditions.append(f"extension_feed_item.extension_type = '{extension_type}'")
+
             if conditions:
                 query += " WHERE " + " AND ".join(conditions)
             
@@ -489,12 +507,15 @@ class ExtensionTools:
         extension_id: str
     ) -> Dict[str, Any]:
         """Delete a specific extension.
-        
+
         Args:
             customer_id: The customer ID
             extension_id: The extension feed item resource name or ID
         """
         try:
+            customer_id = validate_customer_id(customer_id)
+            if not extension_id.startswith("customers/"):
+                extension_id = validate_numeric_id(extension_id, "extension_id")
             client = self.auth_manager.get_client(customer_id)
             extension_feed_item_service = client.get_service("ExtensionFeedItemService")
             

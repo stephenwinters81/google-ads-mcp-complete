@@ -7,6 +7,10 @@ from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 
 from .utils import micros_to_currency
+from .validation import (
+    validate_customer_id, validate_numeric_id, validate_enum,
+    validate_date_range, LOCATION_TYPES, ValidationError,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -27,6 +31,11 @@ class GeographyTools:
     ) -> Dict[str, Any]:
         """Get performance data by geographic location."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if campaign_id:
+                campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            date_range = validate_date_range(date_range)
+            location_type = validate_enum(location_type, LOCATION_TYPES, "location_type")
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -139,6 +148,9 @@ class GeographyTools:
     ) -> Dict[str, Any]:
         """Auto-analyze geographic performance and suggest targeting optimizations."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            date_range = validate_date_range(date_range)
             # First get location performance data
             location_performance = await self.get_location_performance(
                 customer_id, campaign_id, date_range

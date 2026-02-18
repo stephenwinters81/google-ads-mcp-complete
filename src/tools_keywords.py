@@ -7,6 +7,12 @@ from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 
 from .utils import micros_to_currency
+from .validation import (
+    validate_customer_id, validate_numeric_id, validate_enum,
+    sanitize_gaql_string, validate_date_range, validate_positive_number,
+    CAMPAIGN_STATUSES, AD_STATUSES, KEYWORD_STATUSES, KEYWORD_MATCH_TYPES,
+    AD_TYPES, DATE_RANGES, ValidationError,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -34,6 +40,13 @@ class KeywordTools:
         ]
         """
         try:
+            customer_id = validate_customer_id(customer_id)
+            ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            for kw in keywords:
+                if "match_type" in kw:
+                    kw["match_type"] = validate_enum(kw["match_type"], KEYWORD_MATCH_TYPES, "match_type")
+                kw["text"] = sanitize_gaql_string(kw["text"])
+
             client = self.auth_manager.get_client(customer_id)
             ad_group_criterion_service = client.get_service("AdGroupCriterionService")
             
@@ -137,6 +150,13 @@ class KeywordTools:
         - Ad group level: add_negative_keywords(customer_id='123', keywords=['trial'], ad_group_id='789')
         """
         try:
+            customer_id = validate_customer_id(customer_id)
+            if campaign_id:
+                campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            if ad_group_id:
+                ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            keywords = [sanitize_gaql_string(kw) for kw in keywords]
+
             client = self.auth_manager.get_client(customer_id)
             
             if campaign_id:
@@ -255,6 +275,12 @@ class KeywordTools:
     ) -> Dict[str, Any]:
         """List keywords with performance data."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if ad_group_id:
+                ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            if campaign_id:
+                campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -355,6 +381,10 @@ class KeywordTools:
     ) -> Dict[str, Any]:
         """Update the CPC bid for a specific keyword."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            keyword_id = validate_numeric_id(keyword_id, "keyword_id")
+
             client = self.auth_manager.get_client(customer_id)
             ad_group_criterion_service = client.get_service("AdGroupCriterionService")
             
@@ -400,6 +430,10 @@ class KeywordTools:
     ) -> Dict[str, Any]:
         """Delete a specific keyword."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            keyword_id = validate_numeric_id(keyword_id, "keyword_id")
+
             client = self.auth_manager.get_client(customer_id)
             ad_group_criterion_service = client.get_service("AdGroupCriterionService")
             
@@ -434,6 +468,10 @@ class KeywordTools:
     ) -> Dict[str, Any]:
         """Pause a specific keyword."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            keyword_id = validate_numeric_id(keyword_id, "keyword_id")
+
             client = self.auth_manager.get_client(customer_id)
             ad_group_criterion_service = client.get_service("AdGroupCriterionService")
             
@@ -479,6 +517,10 @@ class KeywordTools:
     ) -> Dict[str, Any]:
         """Enable a paused keyword."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            keyword_id = validate_numeric_id(keyword_id, "keyword_id")
+
             client = self.auth_manager.get_client(customer_id)
             ad_group_criterion_service = client.get_service("AdGroupCriterionService")
             
@@ -524,6 +566,11 @@ class KeywordTools:
     ) -> Dict[str, Any]:
         """Get keyword performance data with quality scores."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if ad_group_id:
+                ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            date_range = validate_date_range(date_range)
+
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -603,6 +650,14 @@ class KeywordTools:
     ) -> Dict[str, Any]:
         """Auto-suggest negative keywords based on wasteful search terms."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if campaign_id:
+                campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            if ad_group_id:
+                ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            date_range = validate_date_range(date_range)
+            min_cost = validate_positive_number(min_cost, "min_cost")
+
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -689,6 +744,14 @@ class KeywordTools:
     ) -> Dict[str, Any]:
         """Get comprehensive search terms analysis with keyword opportunities."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if campaign_id:
+                campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            if ad_group_id:
+                ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            date_range = validate_date_range(date_range)
+            min_impressions = validate_positive_number(min_impressions, "min_impressions")
+
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             

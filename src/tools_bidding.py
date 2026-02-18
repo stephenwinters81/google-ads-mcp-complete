@@ -7,6 +7,10 @@ from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 
 from .utils import micros_to_currency
+from .validation import (
+    validate_customer_id, validate_numeric_id,
+    validate_date_range, ValidationError,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -25,7 +29,7 @@ class BiddingTools:
         adjustments: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Set bid adjustments for campaign (device, location, demographic).
-        
+
         Args:
             customer_id: The customer ID
             campaign_id: The campaign ID
@@ -37,6 +41,8 @@ class BiddingTools:
                 }
         """
         try:
+            customer_id = validate_customer_id(customer_id)
+            campaign_id = validate_numeric_id(campaign_id, "campaign_id")
             client = self.auth_manager.get_client(customer_id)
             campaign_criterion_service = client.get_service("CampaignCriterionService")
             
@@ -144,6 +150,9 @@ class BiddingTools:
     ) -> Dict[str, Any]:
         """Get performance data for current bid adjustments."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            date_range = validate_date_range(date_range)
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -254,7 +263,7 @@ class BiddingTools:
         strategy_config: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Create a portfolio bidding strategy for sharing across campaigns.
-        
+
         Args:
             customer_id: The customer ID
             name: Name for the bidding strategy
@@ -270,6 +279,7 @@ class BiddingTools:
                 }
         """
         try:
+            customer_id = validate_customer_id(customer_id)
             client = self.auth_manager.get_client(customer_id)
             bidding_strategy_service = client.get_service("BiddingStrategyService")
             
@@ -375,6 +385,7 @@ class BiddingTools:
     ) -> Dict[str, Any]:
         """List all bidding strategies in the account."""
         try:
+            customer_id = validate_customer_id(customer_id)
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -441,6 +452,10 @@ class BiddingTools:
     ) -> Dict[str, Any]:
         """Get performance breakdown by device type (mobile, desktop, tablet)."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if campaign_id:
+                campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            date_range = validate_date_range(date_range)
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             

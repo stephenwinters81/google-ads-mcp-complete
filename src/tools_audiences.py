@@ -6,6 +6,11 @@ import structlog
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 
+from .validation import (
+    validate_customer_id, validate_numeric_id, validate_enum,
+    validate_date_range, AUDIENCE_TYPES, ValidationError,
+)
+
 logger = structlog.get_logger(__name__)
 
 
@@ -25,7 +30,7 @@ class AudienceTools:
         description: Optional[str] = None
     ) -> Dict[str, Any]:
         """Create a custom audience for targeting.
-        
+
         Args:
             customer_id: The customer ID
             name: Name for the audience
@@ -34,6 +39,8 @@ class AudienceTools:
             description: Optional description
         """
         try:
+            customer_id = validate_customer_id(customer_id)
+            audience_type = validate_enum(audience_type, AUDIENCE_TYPES, "audience_type")
             client = self.auth_manager.get_client(customer_id)
             user_list_service = client.get_service("UserListService")
             
@@ -116,7 +123,7 @@ class AudienceTools:
         bid_modifier: Optional[float] = None
     ) -> Dict[str, Any]:
         """Add audience targeting to an ad group.
-        
+
         Args:
             customer_id: The customer ID
             ad_group_id: The ad group ID
@@ -129,6 +136,8 @@ class AudienceTools:
             bid_modifier: Optional bid adjustment (e.g., 1.2 for +20%)
         """
         try:
+            customer_id = validate_customer_id(customer_id)
+            ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
             client = self.auth_manager.get_client(customer_id)
             ad_group_criterion_service = client.get_service("AdGroupCriterionService")
             
@@ -204,12 +213,15 @@ class AudienceTools:
         audience_type: Optional[str] = None
     ) -> Dict[str, Any]:
         """List all available audiences/user lists.
-        
+
         Args:
             customer_id: The customer ID
             audience_type: Optional filter by audience type (USER_LIST, USER_INTEREST, etc.)
         """
         try:
+            customer_id = validate_customer_id(customer_id)
+            if audience_type:
+                audience_type = validate_enum(audience_type, AUDIENCE_TYPES, "audience_type")
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -284,6 +296,12 @@ class AudienceTools:
     ) -> Dict[str, Any]:
         """Get performance data for audience targeting."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if audience_id:
+                audience_id = validate_numeric_id(audience_id, "audience_id")
+            if campaign_id:
+                campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            date_range = validate_date_range(date_range)
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             

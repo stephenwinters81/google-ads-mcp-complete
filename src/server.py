@@ -72,10 +72,10 @@ class GoogleAdsMCPServer:
                 return [TextContent(type="text", text=content)]
                 
             except Exception as e:
-                logger.error(f"Tool execution failed: {e}", tool=name, arguments=arguments)
+                logger.error("Tool execution failed", tool=name, exc_info=True)
                 error_response = {
                     "success": False,
-                    "error": str(e),
+                    "error": f"Tool execution failed: {type(e).__name__}",
                     "tool": name,
                 }
                 
@@ -83,10 +83,9 @@ class GoogleAdsMCPServer:
                 if hasattr(e, "__class__") and e.__class__.__name__ == "GoogleAdsException":
                     try:
                         error_details = self.error_handler.format_error_response(e)
-                        error_response.update(error_details)
-                    except Exception as format_error:
-                        logger.warning(f"Failed to format Google Ads error: {format_error}")
-                        error_response["ads_error"] = str(e)
+                        error_response["error_code"] = error_details.get("error_code", "UNKNOWN")
+                    except Exception:
+                        logger.warning("Failed to format Google Ads error", exc_info=True)
                     
                 return [TextContent(type="text", text=json.dumps(error_response, indent=2, default=str))]
                 
@@ -105,7 +104,7 @@ class GoogleAdsMCPServer:
                 customers = self.auth_manager.get_accessible_customers()
                 for customer in customers:
                     resources.append(f"googleads://customers/{customer['id']}")
-            except:
+            except Exception:
                 pass
                 
             return resources

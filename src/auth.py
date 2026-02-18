@@ -88,8 +88,8 @@ class GoogleAdsAuthManager:
                 credentials.refresh(Request())
                 logger.info("OAuth2 token refreshed successfully")
             except Exception as e:
-                logger.error(f"Failed to refresh OAuth2 token: {e}")
-                raise AuthenticationError(f"Failed to refresh token: {e}")
+                logger.error("Failed to refresh OAuth2 token", exc_info=True)
+                raise AuthenticationError("Failed to refresh OAuth2 token")
                 
         return credentials
         
@@ -98,10 +98,14 @@ class GoogleAdsAuthManager:
         sa_path = self.config.get("service_account_path")
         if not sa_path:
             raise AuthenticationError("Service account path not provided")
-            
+
         sa_path = Path(sa_path)
+        if not sa_path.suffix == ".json":
+            raise AuthenticationError("Service account file must be a .json file")
+        if ".." in sa_path.parts:
+            raise AuthenticationError("Service account path must not contain path traversal")
         if not sa_path.exists():
-            raise AuthenticationError(f"Service account file not found: {sa_path}")
+            raise AuthenticationError("Service account file not found")
             
         try:
             credentials = ServiceAccountCredentials.from_service_account_file(
@@ -122,8 +126,8 @@ class GoogleAdsAuthManager:
             return credentials
             
         except Exception as e:
-            logger.error(f"Failed to load service account: {e}")
-            raise AuthenticationError(f"Failed to load service account: {e}")
+            logger.error("Failed to load service account", exc_info=True)
+            raise AuthenticationError("Failed to load service account credentials")
             
     def get_client(self, customer_id: Optional[str] = None) -> GoogleAdsClient:
         """Get an authenticated Google Ads client.
@@ -186,8 +190,8 @@ class GoogleAdsAuthManager:
             return client
             
         except Exception as e:
-            logger.error(f"Failed to create Google Ads client: {e}")
-            raise AuthenticationError(f"Failed to create client: {e}")
+            logger.error("Failed to create Google Ads client", exc_info=True)
+            raise AuthenticationError("Failed to create Google Ads client")
             
     def validate_credentials(self, customer_id: Optional[str] = None) -> bool:
         """Validate that credentials work by making a simple API call.
@@ -301,8 +305,8 @@ class GoogleAdsAuthManager:
             return customers
             
         except Exception as e:
-            logger.error(f"Failed to get accessible customers: {e}")
-            raise AuthenticationError(f"Failed to get accessible customers: {e}")
+            logger.error("Failed to get accessible customers", exc_info=True)
+            raise AuthenticationError("Failed to get accessible customers")
             
     def refresh_token(self) -> bool:
         """Manually refresh OAuth token if needed.
@@ -325,5 +329,5 @@ class GoogleAdsAuthManager:
                 return False
                 
         except Exception as e:
-            logger.error(f"Failed to refresh token: {e}")
-            raise AuthenticationError(f"Failed to refresh token: {e}")
+            logger.error("Failed to refresh token", exc_info=True)
+            raise AuthenticationError("Failed to refresh token")

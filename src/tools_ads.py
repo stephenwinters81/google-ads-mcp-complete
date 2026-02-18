@@ -6,6 +6,13 @@ import structlog
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 
+from .validation import (
+    validate_customer_id, validate_numeric_id, validate_enum,
+    sanitize_gaql_string, validate_date_range, validate_positive_number,
+    CAMPAIGN_STATUSES, AD_STATUSES, KEYWORD_STATUSES, KEYWORD_MATCH_TYPES,
+    AD_TYPES, DATE_RANGES, ValidationError,
+)
+
 logger = structlog.get_logger(__name__)
 
 
@@ -28,6 +35,9 @@ class AdTools:
     ) -> Dict[str, Any]:
         """Create a responsive search ad."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+
             client = self.auth_manager.get_client(customer_id)
             ad_group_ad_service = client.get_service("AdGroupAdService")
             
@@ -129,6 +139,9 @@ class AdTools:
     ) -> Dict[str, Any]:
         """Create an expanded text ad (legacy format)."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+
             client = self.auth_manager.get_client(customer_id)
             ad_group_ad_service = client.get_service("AdGroupAdService")
             
@@ -215,6 +228,14 @@ class AdTools:
     ) -> Dict[str, Any]:
         """List ads with optional filters."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if ad_group_id:
+                ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            if campaign_id:
+                campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            if status:
+                status = validate_enum(status, AD_STATUSES, "status")
+
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -322,6 +343,12 @@ class AdTools:
     ) -> Dict[str, Any]:
         """Update an existing ad."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            ad_id = validate_numeric_id(ad_id, "ad_id")
+            if status:
+                status = validate_enum(status, AD_STATUSES, "status")
+
             client = self.auth_manager.get_client(customer_id)
             ad_group_ad_service = client.get_service("AdGroupAdService")
             
@@ -424,6 +451,10 @@ class AdTools:
     ) -> Dict[str, Any]:
         """Delete a specific ad."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            ad_id = validate_numeric_id(ad_id, "ad_id")
+
             client = self.auth_manager.get_client(customer_id)
             ad_group_ad_service = client.get_service("AdGroupAdService")
             
@@ -458,6 +489,12 @@ class AdTools:
     ) -> Dict[str, Any]:
         """Get detailed ad strength, quality ratings, and review status for ads."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if ad_group_id:
+                ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            if campaign_id:
+                campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -625,6 +662,12 @@ class AdTools:
     ) -> Dict[str, Any]:
         """Compare performance of multiple ads side-by-side."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            date_range = validate_date_range(date_range)
+            for aid in ad_ids:
+                validate_numeric_id(aid, "ad_id")
+
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -734,6 +777,10 @@ class AdTools:
     ) -> Dict[str, Any]:
         """Rank all ads in an ad group by performance metrics."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            date_range = validate_date_range(date_range)
+
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -871,6 +918,14 @@ class AdTools:
     ) -> Dict[str, Any]:
         """Identify specific optimization opportunities based on ad performance analysis."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if ad_group_id:
+                ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            if campaign_id:
+                campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            date_range = validate_date_range(date_range)
+            min_clicks = validate_positive_number(min_clicks, "min_clicks")
+
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -1027,6 +1082,14 @@ class AdTools:
     ) -> Dict[str, Any]:
         """Calculate Return on Ad Spend (ROAS) for each ad with detailed breakdown."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if ad_group_id:
+                ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            if campaign_id:
+                campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            date_range = validate_date_range(date_range)
+            min_cost = validate_positive_number(min_cost, "min_cost")
+
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -1184,6 +1247,11 @@ class AdTools:
     ) -> Dict[str, Any]:
         """Analyze how ad strength correlates with performance over time."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            current_date_range = validate_date_range(current_date_range)
+            comparison_date_range = validate_date_range(comparison_date_range)
+
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             

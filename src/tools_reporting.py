@@ -8,6 +8,11 @@ from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 
 from .utils import micros_to_currency, format_date_range
+from .validation import (
+    validate_customer_id, validate_numeric_id,
+    validate_date_range, validate_metrics, validate_gaql_query,
+    ValidationError,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -28,16 +33,22 @@ class ReportingTools:
     ) -> Dict[str, Any]:
         """Get campaign performance metrics."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if campaign_id:
+                campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            date_range = validate_date_range(date_range)
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
-            
+
             # Default metrics if not specified
             if not metrics:
                 metrics = [
                     "clicks", "impressions", "cost_micros", "conversions",
                     "ctr", "average_cpc", "conversion_rate", "cost_per_conversion"
                 ]
-                
+            else:
+                metrics = validate_metrics(metrics)
+
             # Build metrics selection
             metrics_fields = ", ".join([f"metrics.{m}" for m in metrics])
             
@@ -126,6 +137,10 @@ class ReportingTools:
     ) -> Dict[str, Any]:
         """Get ad group performance metrics."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if ad_group_id:
+                ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            date_range = validate_date_range(date_range)
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -202,6 +217,10 @@ class ReportingTools:
     ) -> Dict[str, Any]:
         """Get keyword performance metrics."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if ad_group_id:
+                ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            date_range = validate_date_range(date_range)
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -280,9 +299,11 @@ class ReportingTools:
     async def run_gaql_query(self, customer_id: str, query: str) -> Dict[str, Any]:
         """Run custom GAQL queries."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            query = validate_gaql_query(query)
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
-            
+
             # Clean up the query
             query = query.strip()
             if query.endswith(";"):
@@ -375,6 +396,12 @@ class ReportingTools:
     ) -> Dict[str, Any]:
         """Get search terms report."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if campaign_id:
+                campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            if ad_group_id:
+                ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            date_range = validate_date_range(date_range)
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             

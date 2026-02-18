@@ -8,6 +8,10 @@ from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 
 from .utils import currency_to_micros, micros_to_currency
+from .validation import (
+    validate_customer_id, validate_numeric_id, validate_enum,
+    validate_date_range, AD_GROUP_STATUSES, ValidationError,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -29,6 +33,8 @@ class AdGroupTools:
     ) -> Dict[str, Any]:
         """Create a new ad group in the specified campaign."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            campaign_id = validate_numeric_id(campaign_id, "campaign_id")
             client = self.auth_manager.get_client(customer_id)
             ad_group_service = client.get_service("AdGroupService")
             
@@ -107,6 +113,9 @@ class AdGroupTools:
     ) -> Dict[str, Any]:
         """List ad groups, optionally filtered by campaign."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if campaign_id:
+                campaign_id = validate_numeric_id(campaign_id, "campaign_id")
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -174,6 +183,10 @@ class AdGroupTools:
     ) -> Dict[str, Any]:
         """Update an existing ad group."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
+            if status is not None:
+                status = validate_enum(status, AD_GROUP_STATUSES, "status")
             client = self.auth_manager.get_client(customer_id)
             ad_group_service = client.get_service("AdGroupService")
             
@@ -251,6 +264,8 @@ class AdGroupTools:
     ) -> Dict[str, Any]:
         """Get detailed information about a specific ad group."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            ad_group_id = validate_numeric_id(ad_group_id, "ad_group_id")
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             

@@ -9,6 +9,11 @@ from google.ads.googleads.errors import GoogleAdsException
 from google.protobuf.field_mask_pb2 import FieldMask
 
 from .utils import currency_to_micros, micros_to_currency, parse_date
+from .validation import (
+    validate_customer_id, validate_numeric_id, validate_enum,
+    sanitize_gaql_string, validate_date_range,
+    CAMPAIGN_STATUSES, CAMPAIGN_TYPES, ValidationError,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -34,6 +39,8 @@ class CampaignTools:
     ) -> Dict[str, Any]:
         """Create a new campaign with budget and settings."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            campaign_type = validate_enum(campaign_type, CAMPAIGN_TYPES, "campaign_type")
             client = self.auth_manager.get_client(customer_id)
             
             # First create a budget
@@ -158,7 +165,7 @@ class CampaignTools:
             gtc_query = f"""
                 SELECT geo_target_constant.id, geo_target_constant.name
                 FROM geo_target_constant
-                WHERE geo_target_constant.name = '{location}'
+                WHERE geo_target_constant.name = '{sanitize_gaql_string(location)}'
                     AND geo_target_constant.status = 'ENABLED'
             """
             
@@ -239,9 +246,13 @@ class CampaignTools:
             bidding_strategy: Portfolio bidding strategy resource name (e.g., customers/123/biddingStrategies/456)
         """
         try:
+            customer_id = validate_customer_id(customer_id)
+            campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            if status is not None:
+                status = validate_enum(status, CAMPAIGN_STATUSES, "status")
             client = self.auth_manager.get_client(customer_id)
             campaign_service = client.get_service("CampaignService")
-            
+
             campaign_operation = client.get_type("CampaignOperation")
             campaign = campaign_operation.update
             campaign.resource_name = f"customers/{customer_id}/campaigns/{campaign_id}"
@@ -314,9 +325,14 @@ class CampaignTools:
     ) -> Dict[str, Any]:
         """List all campaigns with optional filters."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            if status:
+                status = validate_enum(status, CAMPAIGN_STATUSES, "status")
+            if campaign_type:
+                campaign_type = validate_enum(campaign_type, CAMPAIGN_TYPES, "campaign_type")
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
-            
+
             query = """
                 SELECT
                     campaign.id,
@@ -325,13 +341,13 @@ class CampaignTools:
                     campaign.advertising_channel_type
                 FROM campaign
             """
-            
+
             conditions = []
             if status:
-                conditions.append(f"campaign.status = '{status.upper()}'")
+                conditions.append(f"campaign.status = '{status}'")
             if campaign_type:
-                conditions.append(f"campaign.advertising_channel_type = '{campaign_type.upper()}'")
-                
+                conditions.append(f"campaign.advertising_channel_type = '{campaign_type}'")
+
             if conditions:
                 query += " AND " + " AND ".join(conditions)
                 
@@ -372,6 +388,8 @@ class CampaignTools:
     async def get_campaign(self, customer_id: str, campaign_id: str) -> Dict[str, Any]:
         """Get detailed campaign information."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            campaign_id = validate_numeric_id(campaign_id, "campaign_id")
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
@@ -457,6 +475,8 @@ class CampaignTools:
     async def delete_campaign(self, customer_id: str, campaign_id: str) -> Dict[str, Any]:
         """Delete a campaign permanently."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            campaign_id = validate_numeric_id(campaign_id, "campaign_id")
             client = self.auth_manager.get_client(customer_id)
             campaign_service = client.get_service("CampaignService")
             
@@ -500,6 +520,8 @@ class CampaignTools:
     ) -> Dict[str, Any]:
         """Copy an existing campaign with a new name and optionally new budget."""
         try:
+            customer_id = validate_customer_id(customer_id)
+            source_campaign_id = validate_numeric_id(source_campaign_id, "source_campaign_id")
             client = self.auth_manager.get_client(customer_id)
             
             # First, get the source campaign details
@@ -580,12 +602,14 @@ class CampaignTools:
                 ]
         """
         try:
+            customer_id = validate_customer_id(customer_id)
+            campaign_id = validate_numeric_id(campaign_id, "campaign_id")
             client = self.auth_manager.get_client(customer_id)
             campaign_criterion_service = client.get_service("CampaignCriterionService")
-            
+
             operations = []
             applied_schedules = []
-            
+
             day_of_week_map = {
                 "MONDAY": client.enums.DayOfWeekEnum.MONDAY,
                 "TUESDAY": client.enums.DayOfWeekEnum.TUESDAY,
@@ -668,7 +692,10 @@ class CampaignTools:
             date_range: Date range for performance metrics
         """
         try:
-            # Get basic campaign info only 
+            customer_id = validate_customer_id(customer_id)
+            campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            date_range = validate_date_range(date_range)
+            # Get basic campaign info only
             campaign_info = await self.get_campaign(customer_id, campaign_id)
             if not campaign_info.get("success"):
                 return campaign_info
@@ -705,7 +732,7 @@ class CampaignTools:
                                 "ctr": f"{perf_row.metrics.ctr:.2%}" if perf_row.metrics.ctr else "0.00%"
                             }
                             break
-                    except: pass
+                    except Exception: pass
                     
                     # Get ads in this ad group (basic info only)
                     ads_summary = []
@@ -718,7 +745,7 @@ class CampaignTools:
                                 "ad_type": str(ad_row.ad_group_ad.ad.type.name),
                                 "status": str(ad_row.ad_group_ad.status.name)
                             })
-                    except: pass
+                    except Exception: pass
                     
                     ad_groups_summary.append({
                         "ad_group_id": ad_group_id,
@@ -729,7 +756,7 @@ class CampaignTools:
                         "ads_count": len(ads_summary)
                     })
                     
-            except: pass  # Skip if error
+            except Exception: pass  # Skip if error
             
             # Simple keyword count using basic query
             positive_keywords = 0
@@ -791,7 +818,7 @@ class CampaignTools:
                     extensions_count["structured_snippets"] = snippet_result.get("count", 0)
                     extensions_count["total"] += extensions_count["structured_snippets"]
                     
-            except: 
+            except Exception:
                 # Fallback to known counts
                 extensions_count = {"sitelinks": 0, "callouts": 49, "structured_snippets": 0, "call_extensions": 0, "total": 49}
             
@@ -805,7 +832,7 @@ class CampaignTools:
                 schedule_summary["has_scheduling"] = len(schedules) > 0
                 if len(schedules) == 5:  # Likely business hours if exactly 5 schedules
                     schedule_summary["business_hours_only"] = True
-            except: pass  # Skip if error
+            except Exception: pass  # Skip if error
             
             # Count audiences
             audience_targeting = {"has_audiences": False, "user_lists": 0, "user_interests": 0, "custom_audiences": 0, "total": 0}
@@ -819,7 +846,7 @@ class CampaignTools:
                     if criterion_type == "USER_LIST": audience_targeting["user_lists"] += 1
                     elif criterion_type == "USER_INTEREST": audience_targeting["user_interests"] += 1
                     elif criterion_type == "CUSTOM_AUDIENCE": audience_targeting["custom_audiences"] += 1
-            except: pass  # Skip if error
+            except Exception: pass  # Skip if error
             
             # Calculate real optimization score based on best practices
             total_negative_kw = negative_keywords + campaign_negative_keywords
