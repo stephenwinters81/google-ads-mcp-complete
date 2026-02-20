@@ -133,10 +133,14 @@ class GoogleAdsTools:
                     "budget_amount": {"type": "number", "required": True},
                     "campaign_type": {"type": "string", "default": "SEARCH"},
                     "bidding_strategy": {"type": "string", "default": "MAXIMIZE_CLICKS"},
+                    "status": {"type": "string", "default": "ENABLED", "description": "Initial campaign status: ENABLED or PAUSED"},
                     "start_date": {"type": "string"},
                     "end_date": {"type": "string"},
-                    "target_locations": {"type": "array"},
-                    "target_languages": {"type": "array"},
+                    "target_locations": {"type": "array", "description": "List of geo target constant IDs (e.g. ['2036'] for Australia) or location names"},
+                    "target_languages": {"type": "array", "description": "List of language names (e.g. 'English') or ISO 639-1 codes (e.g. 'en')"},
+                    "target_cpa_micros": {"type": "number", "description": "Target CPA in micros (for TARGET_CPA / MAXIMIZE_CONVERSIONS strategies)"},
+                    "target_roas": {"type": "number", "description": "Target ROAS as a float (e.g. 3.5 for 350%) (for TARGET_ROAS strategy)"},
+                    "target_search_network": {"type": "boolean", "description": "Include Google Search Partners (default true). Set false for Google Search only."},
                 },
             },
             "update_campaign": {
@@ -451,6 +455,14 @@ class GoogleAdsTools:
                 "handler": self.budget_tools.list_budgets,
                 "parameters": {
                     "customer_id": {"type": "string", "required": True},
+                },
+            },
+            "remove_budget": {
+                "description": "Remove (delete) a campaign budget",
+                "handler": self.budget_tools.remove_budget,
+                "parameters": {
+                    "customer_id": {"type": "string", "required": True},
+                    "budget_id": {"type": "string", "required": True},
                 },
             },
         }
@@ -924,6 +936,16 @@ class GoogleAdsTools:
                     "date_range": {"type": "string", "default": "LAST_30_DAYS"},
                     "min_cost_threshold": {"type": "number", "default": 20.0},
                     "poor_roas_threshold": {"type": "number", "default": 1.0},
+                },
+            },
+            "set_geo_targeting": {
+                "description": "Set geographic targeting on an existing campaign. Accepts numeric geo target constant IDs (e.g. '2036' for Australia, '9071785' for Sydney) or location names.",
+                "handler": self.geography_tools.set_geo_targeting,
+                "parameters": {
+                    "customer_id": {"type": "string", "required": True},
+                    "campaign_id": {"type": "string", "required": True},
+                    "location_ids": {"type": "array", "required": True, "description": "Array of geo target constant IDs or location names to target"},
+                    "negative_location_ids": {"type": "array", "description": "Array of geo target constant IDs or location names to exclude"},
                 },
             },
         }

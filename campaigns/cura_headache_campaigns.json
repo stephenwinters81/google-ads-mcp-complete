@@ -1,0 +1,401 @@
+{
+  "_meta": {
+    "client": "CURA Medical Specialists",
+    "customer_id": "4611756192",
+    "source": "GoMarble.ai campaign spec, reviewed and corrected",
+    "created": "2026-02-20",
+    "total_daily_budget_aud": 50.00,
+    "notes": [
+      "All campaigns created as PAUSED — do not enable until Google health keyword policy exception is approved",
+      "Search Network Partners excluded (Google Search only)",
+      "Language targeting: English (en)",
+      "MAXIMIZE_CONVERSIONS bidding — no manual bid adjustments (device/schedule modifiers ignored by Smart Bidding)",
+      "Ad schedules restrict serving hours only (all bid_modifier = 1.0)",
+      "Negative keywords applied at campaign level, all BROAD match",
+      "Audience signals in OBSERVATION mode only (IDs 538, 540 — verify in account before applying)"
+    ]
+  },
+
+  "shared_settings": {
+    "negative_keywords": [
+      "free", "cheap", "diy", "home remedy", "natural cure", "essential oils",
+      "emergency", "hospital", "urgent care", "gp", "general practitioner", "bulk bill",
+      "jobs", "careers", "courses", "training",
+      "pediatric", "paediatric", "children", "kids", "baby", "infant"
+    ],
+    "ad_schedule": [
+      { "day_of_week": "MONDAY",    "start_hour": 8, "end_hour": 18, "bid_modifier": 1.0 },
+      { "day_of_week": "TUESDAY",   "start_hour": 8, "end_hour": 18, "bid_modifier": 1.0 },
+      { "day_of_week": "WEDNESDAY", "start_hour": 8, "end_hour": 18, "bid_modifier": 1.0 },
+      { "day_of_week": "THURSDAY",  "start_hour": 8, "end_hour": 18, "bid_modifier": 1.0 },
+      { "day_of_week": "FRIDAY",    "start_hour": 8, "end_hour": 18, "bid_modifier": 1.0 },
+      { "day_of_week": "SATURDAY",  "start_hour": 9, "end_hour": 13, "bid_modifier": 1.0 }
+    ],
+    "audience_signals": [
+      { "audience_id": "538", "targeting_mode": "OBSERVATION", "label": "Healthcare" },
+      { "audience_id": "540", "targeting_mode": "OBSERVATION", "label": "Medical & Health Services" }
+    ],
+    "extensions_default": {
+      "sitelinks": [
+        {
+          "text": "Book Appointment",
+          "description1": "Schedule specialist consultation",
+          "description2": "Same-month availability",
+          "url": "https://curaspecialists.com.au/book-appointment"
+        },
+        {
+          "text": "Our Specialists",
+          "description1": "Fellowship-trained neurologists",
+          "description2": "FRACP-certified headache experts",
+          "url": "https://curaspecialists.com.au/doctors"
+        },
+        {
+          "text": "Medicare Rebates",
+          "description1": "Medicare-eligible with GP referral",
+          "description2": "Check your eligibility today",
+          "url": "https://curaspecialists.com.au/fees"
+        },
+        {
+          "text": "Drummoyne Clinic",
+          "description1": "Suite 3.2, 135 Victoria Road",
+          "description2": "Mon-Fri 9-5 | Call 02 7906 8356",
+          "url": "https://curaspecialists.com.au/locations/drummoyne"
+        }
+      ],
+      "sitelinks_campaign3_override": {
+        "index": 3,
+        "replacement": {
+          "text": "Penrith Clinic",
+          "description1": "Nepean Private, Level 2, Kingswood",
+          "description2": "Mon-Fri 9-5:30 | Easy parking",
+          "url": "https://curaspecialists.com.au/locations/nepean-penrith"
+        }
+      },
+      "callouts": [
+        "Fellowship-Trained Docs",
+        "Medicare Rebates",
+        "Same-Month Appointments",
+        "FRACP-Certified",
+        "Evidence-Based Care",
+        "Comprehensive Assessment",
+        "Two Sydney Locations",
+        "Expert Headache Care"
+      ],
+      "structured_snippets": [
+        {
+          "header": "Services",
+          "values": [
+            "Migraine Treatment",
+            "Tension Headaches",
+            "Cluster Headaches",
+            "Cervicogenic Care",
+            "Headache Assessment",
+            "Neurologist Consults",
+            "Treatment Plans",
+            "Medicare Consultations"
+          ]
+        }
+      ]
+    }
+  },
+
+  "campaigns": [
+    {
+      "campaign_number": 1,
+      "create_campaign": {
+        "customer_id": "4611756192",
+        "name": "CURA Headache Specialist - Near Me",
+        "budget_amount": 20.00,
+        "campaign_type": "SEARCH",
+        "bidding_strategy": "MAXIMIZE_CONVERSIONS",
+        "status": "PAUSED",
+        "target_locations": ["1000350", "1012054", "1000351"],
+        "target_languages": ["en"],
+        "target_search_network": false
+      },
+      "create_ad_group": {
+        "name": "Headache Specialist Near Me",
+        "cpc_bid_micros": 3000000
+      },
+      "add_keywords": [
+        { "text": "headache specialist sydney", "match_type": "EXACT" },
+        { "text": "migraine specialist sydney", "match_type": "EXACT" },
+        { "text": "neurologist headache sydney", "match_type": "EXACT" },
+        { "text": "headache doctor drummoyne", "match_type": "EXACT" },
+        { "text": "headache doctor penrith", "match_type": "EXACT" },
+        { "text": "headache specialist near me", "match_type": "EXACT" },
+        { "text": "migraine specialist near me", "match_type": "EXACT" },
+        { "text": "headache doctor near me", "match_type": "EXACT" },
+        { "text": "neurologist for headaches", "match_type": "EXACT" },
+        { "text": "headache dr near me", "match_type": "EXACT" },
+        { "text": "headache specialist near me", "match_type": "PHRASE" },
+        { "text": "migraine specialist near me", "match_type": "PHRASE" },
+        { "text": "neurologist for headaches", "match_type": "PHRASE" },
+        { "text": "headache specialist drummoyne", "match_type": "PHRASE" },
+        { "text": "headache specialist penrith", "match_type": "PHRASE" },
+        { "text": "headache doctor sydney", "match_type": "PHRASE" },
+        { "text": "neurologist headache", "match_type": "PHRASE" },
+        { "text": "headache specialist sydney", "match_type": "PHRASE" },
+        { "text": "migraine specialist sydney", "match_type": "PHRASE" },
+        { "text": "headache doctor drummoyne", "match_type": "PHRASE" },
+        { "text": "headache doctor penrith", "match_type": "PHRASE" },
+        { "text": "headache specialist sydney", "match_type": "BROAD" },
+        { "text": "neurologist headache near me", "match_type": "BROAD" },
+        { "text": "headache doctor near me", "match_type": "BROAD" }
+      ],
+      "create_responsive_search_ad": {
+        "headlines": [
+          "Headache Specialist Sydney",
+          "Fellowship-Trained Doctors",
+          "Expert Migraine Treatment",
+          "Medicare Rebates Available",
+          "Same-Month Appointments",
+          "Drummoyne & Penrith Clinics",
+          "FRACP-Certified Specialists",
+          "Relief From Chronic Headaches",
+          "Book Specialist Consultation",
+          "Evidence-Based Headache Care",
+          "Stop Suffering From Headaches",
+          "Advanced Treatment Options",
+          "Experienced Headache Doctors",
+          "Personalised Care Plans",
+          "Expert Neurologists Sydney"
+        ],
+        "descriptions": [
+          "Fellowship-trained neurologists specializing in migraine & headache care. Medicare rebates",
+          "FRACP-certified specialists at Drummoyne & Penrith. Personalised plans. Book same-month.",
+          "Expert diagnosis for migraines, cluster & chronic headaches. Evidence-based care. Call now",
+          "Stop letting headaches rule your life. Specialist evaluation, Medicare-eligible. Book now"
+        ],
+        "final_urls": ["https://curaspecialists.com.au/landing/google-ads/headache-specialist"],
+        "path1": "Headache-Clinic",
+        "path2": "Sydney-Consult"
+      },
+      "use_extensions": "default"
+    },
+
+    {
+      "campaign_number": 2,
+      "create_campaign": {
+        "customer_id": "4611756192",
+        "name": "CURA Headache Specialist - Migraine",
+        "budget_amount": 15.00,
+        "campaign_type": "SEARCH",
+        "bidding_strategy": "MAXIMIZE_CONVERSIONS",
+        "status": "PAUSED",
+        "target_locations": ["1000350", "1012054", "1000351"],
+        "target_languages": ["en"],
+        "target_search_network": false
+      },
+      "create_ad_group": {
+        "name": "Migraine Treatment",
+        "cpc_bid_micros": 3000000
+      },
+      "add_keywords": [
+        { "text": "migraine treatment sydney", "match_type": "EXACT" },
+        { "text": "chronic migraine specialist", "match_type": "EXACT" },
+        { "text": "migraine doctor sydney", "match_type": "EXACT" },
+        { "text": "migraine specialist near me", "match_type": "EXACT" },
+        { "text": "migraine treatment sydney", "match_type": "PHRASE" },
+        { "text": "migraine specialist near me", "match_type": "PHRASE" },
+        { "text": "chronic migraine treatment", "match_type": "PHRASE" },
+        { "text": "migraine relief specialist", "match_type": "PHRASE" },
+        { "text": "migraine doctor drummoyne", "match_type": "PHRASE" },
+        { "text": "migraine doctor penrith", "match_type": "PHRASE" },
+        { "text": "migraine treatment sydney", "match_type": "BROAD" },
+        { "text": "chronic migraine specialist", "match_type": "BROAD" }
+      ],
+      "create_responsive_search_ad": {
+        "headlines": [
+          "Migraine Specialist Sydney",
+          "Stop Chronic Migraines",
+          "FRACP Migraine Experts",
+          "Advanced Migraine Treatment",
+          "Migraine Relief Specialists",
+          "Medicare-Eligible Care",
+          "Fellowship-Trained Doctors",
+          "Personalised Migraine Plans",
+          "Same-Month Availability",
+          "Drummoyne & Penrith",
+          "Latest Migraine Therapies",
+          "CGRP Treatment Available",
+          "Expert Migraine Assessment",
+          "Book Migraine Consultation",
+          "Break The Migraine Cycle"
+        ],
+        "descriptions": [
+          "Chronic migraines disrupting your life? Fellowship-trained specialists offer advanced care",
+          "Expert migraine management from FRACP-certified neurologists. Latest therapies. Book now.",
+          "Comprehensive migraine evaluation & personalised plans. Evidence-based care. Call today.",
+          "Stop suffering from frequent migraines. Specialist care, proven treatments. Same-month."
+        ],
+        "final_urls": ["https://curaspecialists.com.au/landing/google-ads/headache-specialist"],
+        "path1": "Migraine-Care",
+        "path2": "Sydney-Expert"
+      },
+      "use_extensions": "default"
+    },
+
+    {
+      "campaign_number": 3,
+      "create_campaign": {
+        "customer_id": "4611756192",
+        "name": "CURA Headache Specialist - Tension Cluster",
+        "budget_amount": 10.00,
+        "campaign_type": "SEARCH",
+        "bidding_strategy": "MAXIMIZE_CONVERSIONS",
+        "status": "PAUSED",
+        "target_locations": ["1000350", "1012054", "1000351"],
+        "target_languages": ["en"],
+        "target_search_network": false
+      },
+      "create_ad_group": {
+        "name": "Tension Cluster Headaches",
+        "cpc_bid_micros": 2500000
+      },
+      "add_keywords": [
+        { "text": "tension headache specialist", "match_type": "EXACT" },
+        { "text": "cluster headache treatment sydney", "match_type": "EXACT" },
+        { "text": "chronic daily headache specialist", "match_type": "EXACT" },
+        { "text": "tension headache specialist sydney", "match_type": "EXACT" },
+        { "text": "cluster headache doctor", "match_type": "EXACT" },
+        { "text": "tension headache doctor", "match_type": "EXACT" },
+        { "text": "tension headache specialist sydney", "match_type": "PHRASE" },
+        { "text": "cluster headache doctor", "match_type": "PHRASE" },
+        { "text": "daily headache specialist", "match_type": "PHRASE" },
+        { "text": "chronic headache treatment", "match_type": "PHRASE" },
+        { "text": "tension headache doctor", "match_type": "PHRASE" },
+        { "text": "cluster headache specialist", "match_type": "PHRASE" },
+        { "text": "tension headache treatment", "match_type": "PHRASE" },
+        { "text": "cluster headache treatment", "match_type": "PHRASE" },
+        { "text": "chronic tension headache", "match_type": "PHRASE" },
+        { "text": "frequent tension headaches", "match_type": "PHRASE" },
+        { "text": "daily tension headaches", "match_type": "PHRASE" },
+        { "text": "tension headache specialist", "match_type": "BROAD" },
+        { "text": "cluster headache treatment", "match_type": "BROAD" },
+        { "text": "chronic headache treatment", "match_type": "BROAD" }
+      ],
+      "create_responsive_search_ad": {
+        "headlines": [
+          "Tension Headache Specialists",
+          "Cluster Headache Experts",
+          "Chronic Headache Relief",
+          "Daily Headache Solutions",
+          "Fellowship-Trained Care",
+          "Expert Neurologists Sydney",
+          "Break The Headache Cycle",
+          "Medicare Rebates Available",
+          "Evidence-Based Treatment",
+          "Drummoyne & Penrith",
+          "FRACP-Certified Doctors",
+          "Personalised Assessment",
+          "Same-Month Bookings",
+          "Stop Daily Headaches",
+          "Leading Headache Specialists"
+        ],
+        "descriptions": [
+          "Daily tension headaches? Fellowship-trained neurologists provide expert relief. Book today",
+          "Cluster & chronic headache care. FRACP-certified neurologists. Book your consultation now.",
+          "Break free from the headache cycle. Comprehensive evaluation, personalised plans. Call now",
+          "Expert diagnosis for persistent headaches. Evidence-based specialist care. Book today."
+        ],
+        "final_urls": ["https://curaspecialists.com.au/landing/google-ads/headache-specialist"],
+        "path1": "Headache-Relief",
+        "path2": "Sydney-Experts"
+      },
+      "use_extensions": "campaign3_penrith"
+    },
+
+    {
+      "campaign_number": 4,
+      "create_campaign": {
+        "customer_id": "4611756192",
+        "name": "CURA Headache Specialist - Cervicogenic",
+        "budget_amount": 5.00,
+        "campaign_type": "SEARCH",
+        "bidding_strategy": "MAXIMIZE_CONVERSIONS",
+        "status": "PAUSED",
+        "target_locations": ["1000350", "1012054", "1000351"],
+        "target_languages": ["en"],
+        "target_search_network": false
+      },
+      "create_ad_group": {
+        "name": "Cervicogenic Headaches",
+        "cpc_bid_micros": 2000000
+      },
+      "add_keywords": [
+        { "text": "cervicogenic headache specialist", "match_type": "EXACT" },
+        { "text": "neck headache treatment sydney", "match_type": "EXACT" },
+        { "text": "cervicogenic headache treatment", "match_type": "EXACT" },
+        { "text": "neck related headache specialist", "match_type": "EXACT" },
+        { "text": "headache from neck", "match_type": "EXACT" },
+        { "text": "cervicogenic headache doctor", "match_type": "EXACT" },
+        { "text": "neck pain headache specialist", "match_type": "EXACT" },
+        { "text": "cervicogenic headache specialist", "match_type": "PHRASE" },
+        { "text": "neck headache treatment", "match_type": "PHRASE" },
+        { "text": "headache from neck", "match_type": "PHRASE" },
+        { "text": "neck related headache specialist", "match_type": "PHRASE" },
+        { "text": "cervicogenic headache treatment", "match_type": "PHRASE" },
+        { "text": "neck pain headache", "match_type": "PHRASE" },
+        { "text": "cervicogenic headache doctor", "match_type": "PHRASE" },
+        { "text": "headache caused by neck", "match_type": "PHRASE" },
+        { "text": "neck headache specialist", "match_type": "PHRASE" },
+        { "text": "cervicogenic headache specialist sydney", "match_type": "PHRASE" },
+        { "text": "cervicogenic headache specialist", "match_type": "BROAD" },
+        { "text": "neck headache treatment", "match_type": "BROAD" },
+        { "text": "headache from neck", "match_type": "BROAD" },
+        { "text": "neck related headache", "match_type": "BROAD" },
+        { "text": "cervicogenic headache sydney", "match_type": "BROAD" }
+      ],
+      "create_responsive_search_ad": {
+        "headlines": [
+          "Cervicogenic Headache Care",
+          "Neck-Related Headache Experts",
+          "Specialist Headache Assessment",
+          "Fellowship-Trained Doctors",
+          "Stop Neck-Related Pain",
+          "Evidence-Based Treatment",
+          "Sydney Headache Specialists",
+          "Medicare-Eligible Care",
+          "Comprehensive Evaluation",
+          "Drummoyne & Penrith",
+          "FRACP-Certified Doctors",
+          "Advanced Treatment Options",
+          "Book Specialist Appointment",
+          "Relief From Neck Headaches",
+          "Expert Cervicogenic Care"
+        ],
+        "descriptions": [
+          "Headaches from your neck? Fellowship-trained neurologists. Evidence-based care. Book today",
+          "FRACP specialists in Drummoyne & Penrith. Cervicogenic headache care. Medicare eligible.",
+          "Expert neck-related headache assessment. Personalised treatment plans. Same-month bookings",
+          "Stop neck headaches. Expert neurologists, proven results. Medicare rebates with referral."
+        ],
+        "final_urls": ["https://curaspecialists.com.au/landing/google-ads/headache-specialist"],
+        "path1": "Cervicogenic",
+        "path2": "Specialist-Care"
+      },
+      "use_extensions": "default"
+    }
+  ],
+
+  "_corrections_applied": {
+    "descriptions_trimmed": [
+      "C1 D4: 'control' → 'rule' to save 3 chars (92→89)",
+      "C2 D1: removed trailing period (91→90)",
+      "C3 D1: removed trailing period (91→90)",
+      "C3 D3: removed trailing period (91→90)",
+      "C3 D4: 'care from specialists' → 'specialist care' (92→86)",
+      "C4 D1: removed trailing period (91→90)",
+      "C4 D3: removed trailing period (91→90)"
+    ],
+    "headline_fixed": [
+      "C4 H4: 'Fellowship-Trained Neurologists' (31 chars) → 'Fellowship-Trained Doctors' (26 chars)"
+    ],
+    "code_fixes_applied": [
+      "create_campaign now accepts status='PAUSED' parameter",
+      "create_campaign now accepts target_search_network=false parameter",
+      "Language targeting accepts ISO 639-1 codes ('en') in addition to full names ('English')"
+    ]
+  }
+}

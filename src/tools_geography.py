@@ -9,7 +9,7 @@ from google.ads.googleads.errors import GoogleAdsException
 from .utils import micros_to_currency
 from .validation import (
     validate_customer_id, validate_numeric_id, validate_enum,
-    validate_date_range, LOCATION_TYPES, ValidationError,
+    sanitize_gaql_string, validate_date_range, LOCATION_TYPES, ValidationError,
 )
 
 logger = structlog.get_logger(__name__)
@@ -245,6 +245,99 @@ class GeographyTools:
             logger.error(f"Failed to optimize geographic targeting: {e}")
             raise
     
+    async def set_geo_targeting(
+        self,
+        customer_id: str,
+        campaign_id: str,
+        location_ids: List[str],
+        negative_location_ids: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Set geographic targeting on an existing campaign.
+
+        Args:
+            customer_id: The customer ID.
+            campaign_id: The campaign ID.
+            location_ids: List of geo target constant IDs (e.g. ['2036'] for Australia)
+                or location names (e.g. ['Australia']).
+            negative_location_ids: Optional list of geo target constant IDs or names
+                to exclude.
+        """
+        try:
+            customer_id = validate_customer_id(customer_id)
+            campaign_id = validate_numeric_id(campaign_id, "campaign_id")
+            client = self.auth_manager.get_client(customer_id)
+            campaign_criterion_service = client.get_service("CampaignCriterionService")
+
+            operations = []
+            resolved_locations = []
+
+            all_entries = [(loc, False) for loc in location_ids]
+            if negative_location_ids:
+                all_entries += [(loc, True) for loc in negative_location_ids]
+
+            for location, is_negative in all_entries:
+                location = str(location).strip()
+
+                if location.isdigit():
+                    geo_resource = f"geoTargetConstants/{location}"
+                else:
+                    # Resolve name to ID via suggest API
+                    geo_target_constant_service = client.get_service("GeoTargetConstantService")
+                    gtc_request = client.get_type("SuggestGeoTargetConstantsRequest")
+                    gtc_request.locale = "en"
+                    gtc_request.location_names.names.append(sanitize_gaql_string(location))
+
+                    gtc_response = geo_target_constant_service.suggest_geo_target_constants(
+                        request=gtc_request
+                    )
+                    geo_resource = None
+                    for suggestion in gtc_response.geo_target_constant_suggestions:
+                        geo_resource = suggestion.geo_target_constant.resource_name
+                        break
+                    if not geo_resource:
+                        logger.warning(f"Could not resolve location: {location}")
+                        continue
+
+                operation = client.get_type("CampaignCriterionOperation")
+                criterion = operation.create
+                criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
+                criterion.location.geo_target_constant = geo_resource
+                criterion.negative = is_negative
+                operations.append(operation)
+                resolved_locations.append({
+                    "input": location,
+                    "geo_target_constant": geo_resource,
+                    "negative": is_negative,
+                })
+
+            if not operations:
+                return {
+                    "success": False,
+                    "error": "No valid locations could be resolved",
+                }
+
+            response = campaign_criterion_service.mutate_campaign_criteria(
+                customer_id=customer_id,
+                operations=operations,
+            )
+
+            return {
+                "success": True,
+                "campaign_id": campaign_id,
+                "locations_added": len([r for r in resolved_locations if not r["negative"]]),
+                "negative_locations_added": len([r for r in resolved_locations if r["negative"]]),
+                "details": resolved_locations,
+                "resource_names": [result.resource_name for result in response.results],
+                "message": f"Geo targeting updated for campaign {campaign_id}",
+            }
+
+        except GoogleAdsException as e:
+            logger.error(f"Failed to set geo targeting: {e}")
+            return self.error_handler.format_error_response(e)
+        except Exception as e:
+            logger.error(f"Unexpected error setting geo targeting: {e}")
+            raise
+
     def _generate_geographic_recommendations(self, location_data: List[Dict], avg_cost_per_conversion: float, avg_roas: float) -> List[str]:
         """Generate geographic optimization recommendations."""
         recommendations = []

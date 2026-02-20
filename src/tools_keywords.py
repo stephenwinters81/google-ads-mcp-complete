@@ -84,12 +84,40 @@ class KeywordTools:
                 
                 operations.append(operation)
             
-            # Execute all operations
-            response = ad_group_criterion_service.mutate_ad_group_criteria(
-                customer_id=customer_id,
-                operations=operations,
-            )
-            
+            # Execute all operations, with automatic policy exemption retry
+            try:
+                response = ad_group_criterion_service.mutate_ad_group_criteria(
+                    customer_id=customer_id,
+                    operations=operations,
+                )
+            except GoogleAdsException as ex:
+                # Check if all errors are exemptible policy violations
+                exemption_keys_by_op: Dict[int, list] = {}
+                all_exemptible = True
+                for error in ex.failure.errors:
+                    if not error.details.policy_violation_details.is_exemptible:
+                        all_exemptible = False
+                        break
+                    op_index = error.location.field_path_elements[0].index
+                    key = client.get_type("PolicyViolationKey")
+                    key.policy_name = error.details.policy_violation_details.key.policy_name
+                    key.violating_text = error.details.policy_violation_details.key.violating_text
+                    exemption_keys_by_op.setdefault(op_index, []).append(key)
+
+                if not all_exemptible:
+                    raise
+
+                # Retry with exemption keys attached to each operation
+                logger.info("Retrying keywords with policy exemptions",
+                            exemptions=len(exemption_keys_by_op))
+                for op_idx, keys in exemption_keys_by_op.items():
+                    for k in keys:
+                        operations[op_idx].exempt_policy_violation_keys.append(k)
+                response = ad_group_criterion_service.mutate_ad_group_criteria(
+                    customer_id=customer_id,
+                    operations=operations,
+                )
+
             # Extract results
             added_keywords = []
             for i, result in enumerate(response.results):
@@ -101,21 +129,21 @@ class KeywordTools:
                     "cpc_bid": micros_to_currency(keywords[i].get("cpc_bid_micros", 0)),
                     "resource_name": result.resource_name
                 })
-            
+
             logger.info(
                 f"Added keywords to ad group",
                 customer_id=customer_id,
                 ad_group_id=ad_group_id,
                 keywords_count=len(added_keywords)
             )
-            
+
             return {
                 "success": True,
                 "keywords": added_keywords,
                 "count": len(added_keywords),
                 "ad_group_id": ad_group_id
             }
-            
+
         except GoogleAdsException as e:
             logger.error(f"Failed to add keywords: {e}")
             return {

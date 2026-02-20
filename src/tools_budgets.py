@@ -37,6 +37,7 @@ class BudgetTools:
             # Set budget properties
             budget.name = name
             budget.amount_micros = amount_micros
+            budget.explicitly_shared = False
             
             # Set delivery method
             if delivery_method.upper() == "ACCELERATED":
@@ -158,6 +159,40 @@ class BudgetTools:
                 "error_type": "UnexpectedError"
             }
     
+    async def remove_budget(
+        self,
+        customer_id: str,
+        budget_id: str,
+    ) -> Dict[str, Any]:
+        """Remove (delete) a campaign budget."""
+        try:
+            client = self.auth_manager.get_client(customer_id)
+            budget_service = client.get_service("CampaignBudgetService")
+
+            budget_operation = client.get_type("CampaignBudgetOperation")
+            budget_operation.remove = budget_service.campaign_budget_path(
+                customer_id, budget_id
+            )
+
+            response = budget_service.mutate_campaign_budgets(
+                customer_id=customer_id,
+                operations=[budget_operation],
+            )
+
+            logger.info("Removed campaign budget", customer_id=customer_id, budget_id=budget_id)
+            return {
+                "success": True,
+                "budget_id": budget_id,
+                "message": f"Successfully removed budget {budget_id}",
+            }
+
+        except GoogleAdsException as e:
+            logger.error(f"Failed to remove budget: {e}")
+            return {"success": False, "error": str(e), "error_type": "GoogleAdsException"}
+        except Exception as e:
+            logger.error(f"Unexpected error removing budget: {e}")
+            return {"success": False, "error": str(e), "error_type": "UnexpectedError"}
+
     async def list_budgets(
         self,
         customer_id: str

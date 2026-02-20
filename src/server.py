@@ -405,6 +405,7 @@ async def main():
     """Main entry point."""
     # Look for config in standard locations
     config_paths = [
+        Path("config.json"),
         Path.home() / ".config" / "google-ads-mcp" / "config.json",
         Path.home() / ".google-ads-mcp.json",
         Path("google-ads-config.json"),

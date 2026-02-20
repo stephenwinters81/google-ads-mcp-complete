@@ -80,16 +80,39 @@ class AdTools:
             if path2:
                 responsive_search_ad_info.path2 = path2
             
-            # Create the ad
-            response = ad_group_ad_service.mutate_ad_group_ads(
-                customer_id=customer_id,
-                operations=[ad_group_ad_operation],
-            )
-            
+            # Create the ad, with automatic policy exemption retry
+            operations = [ad_group_ad_operation]
+            try:
+                response = ad_group_ad_service.mutate_ad_group_ads(
+                    customer_id=customer_id,
+                    operations=operations,
+                )
+            except GoogleAdsException as ex:
+                # Check if all errors are exemptible policy violations
+                all_exemptible = True
+                for error in ex.failure.errors:
+                    if not error.details.policy_violation_details.is_exemptible:
+                        all_exemptible = False
+                        break
+                if not all_exemptible:
+                    raise
+                # Collect exemption keys and retry
+                for error in ex.failure.errors:
+                    op_index = error.location.field_path_elements[0].index
+                    key = client.get_type("PolicyViolationKey")
+                    key.policy_name = error.details.policy_violation_details.key.policy_name
+                    key.violating_text = error.details.policy_violation_details.key.violating_text
+                    operations[op_index].policy_validation_parameter.exempt_policy_violation_keys.append(key)
+                logger.info("Retrying RSA creation with policy exemptions")
+                response = ad_group_ad_service.mutate_ad_group_ads(
+                    customer_id=customer_id,
+                    operations=operations,
+                )
+
             # Extract ad ID from response
             ad_resource_name = response.results[0].resource_name
             ad_id = ad_resource_name.split("/")[-1]
-            
+
             logger.info(
                 f"Created responsive search ad",
                 customer_id=customer_id,
@@ -98,7 +121,7 @@ class AdTools:
                 headlines_count=len(headlines),
                 descriptions_count=len(descriptions)
             )
-            
+
             return {
                 "success": True,
                 "ad_id": ad_id,
@@ -110,7 +133,7 @@ class AdTools:
                 "final_urls": final_urls,
                 "status": "ENABLED"
             }
-            
+
         except GoogleAdsException as e:
             logger.error(f"Failed to create responsive search ad: {e}")
             return {

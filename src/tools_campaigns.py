@@ -12,7 +12,7 @@ from .utils import currency_to_micros, micros_to_currency, parse_date
 from .validation import (
     validate_customer_id, validate_numeric_id, validate_enum,
     sanitize_gaql_string, validate_date_range,
-    CAMPAIGN_STATUSES, CAMPAIGN_TYPES, ValidationError,
+    CAMPAIGN_STATUSES, CAMPAIGN_TYPES, BIDDING_STRATEGY_TYPES, ValidationError,
 )
 
 logger = structlog.get_logger(__name__)
@@ -32,10 +32,14 @@ class CampaignTools:
         budget_amount: float,
         campaign_type: str = "SEARCH",
         bidding_strategy: str = "MAXIMIZE_CLICKS",
+        status: str = "ENABLED",
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         target_locations: Optional[List[str]] = None,
         target_languages: Optional[List[str]] = None,
+        target_cpa_micros: Optional[int] = None,
+        target_roas: Optional[float] = None,
+        target_search_network: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """Create a new campaign with budget and settings."""
         try:
@@ -53,6 +57,7 @@ class CampaignTools:
             budget.name = f"{name} - Budget"
             budget.amount_micros = currency_to_micros(budget_amount)
             budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
+            budget.explicitly_shared = False
             
             # Add the budget
             budget_response = budget_service.mutate_campaign_budgets(
@@ -88,12 +93,42 @@ class CampaignTools:
                 channel_subtype_enum = client.enums.AdvertisingChannelSubTypeEnum
                 campaign.advertising_channel_sub_type = channel_subtype_enum.SHOPPING_COMPARISON_LISTING_ADS
             
-            # Set bidding strategy (API v21 compatible) 
-            # For now, use manual CPC which we know works
-            manual_cpc = client.get_type("ManualCpc")
-            campaign.manual_cpc = manual_cpc
-            
-            # TODO: Add other bidding strategies once we figure out the correct API v21 syntax
+            # Set bidding strategy (API v21 compatible)
+            strategy = bidding_strategy.upper() if bidding_strategy else "MAXIMIZE_CLICKS"
+
+            if strategy == "MANUAL_CPC":
+                campaign.manual_cpc = client.get_type("ManualCpc")
+            elif strategy == "ENHANCED_CPC":
+                manual_cpc = client.get_type("ManualCpc")
+                manual_cpc.enhanced_cpc_enabled = True
+                campaign.manual_cpc = manual_cpc
+            elif strategy == "MAXIMIZE_CLICKS":
+                campaign.maximize_clicks = client.get_type("MaximizeClicks")
+            elif strategy == "MAXIMIZE_CONVERSIONS":
+                max_conv = client.get_type("MaximizeConversions")
+                if target_cpa_micros:
+                    max_conv.target_cpa_micros = target_cpa_micros
+                campaign.maximize_conversions = max_conv
+            elif strategy == "TARGET_CPA":
+                max_conv = client.get_type("MaximizeConversions")
+                if target_cpa_micros:
+                    max_conv.target_cpa_micros = target_cpa_micros
+                campaign.maximize_conversions = max_conv
+            elif strategy == "MAXIMIZE_CONVERSION_VALUE":
+                campaign.maximize_conversion_value = client.get_type("MaximizeConversionValue")
+            elif strategy == "TARGET_ROAS":
+                max_val = client.get_type("MaximizeConversionValue")
+                if target_roas:
+                    max_val.target_roas = target_roas
+                campaign.maximize_conversion_value = max_val
+            elif strategy == "TARGET_IMPRESSION_SHARE":
+                tis = client.get_type("TargetImpressionShare")
+                tis.location = client.enums.TargetImpressionShareLocationEnum.ANYWHERE_ON_PAGE
+                tis.location_fraction_micros = 500000  # 50%
+                campaign.target_impression_share = tis
+            else:
+                logger.warning(f"Unknown bidding strategy '{strategy}', falling back to Manual CPC")
+                campaign.manual_cpc = client.get_type("ManualCpc")
                 
             # Set dates
             if start_date:
@@ -104,11 +139,19 @@ class CampaignTools:
             # Set network settings for Search campaigns
             if campaign_type.upper() == "SEARCH":
                 campaign.network_settings.target_google_search = True
-                campaign.network_settings.target_search_network = True
+                # Default to including search partners unless explicitly disabled
+                if target_search_network is not None:
+                    campaign.network_settings.target_search_network = target_search_network
+                else:
+                    campaign.network_settings.target_search_network = True
                 campaign.network_settings.target_partner_search_network = False
-                
-            # Set campaign status
-            campaign.status = client.enums.CampaignStatusEnum.ENABLED
+
+            # Set campaign status (ENABLED or PAUSED)
+            status_upper = status.upper() if status else "ENABLED"
+            if status_upper == "PAUSED":
+                campaign.status = client.enums.CampaignStatusEnum.PAUSED
+            else:
+                campaign.status = client.enums.CampaignStatusEnum.ENABLED
             
             # Set required API v21 fields - use proper enum for EU political advertising
             # DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING since we're targeting non-EU only
@@ -123,11 +166,11 @@ class CampaignTools:
             campaign_resource_name = campaign_response.results[0].resource_name
             campaign_id = campaign_resource_name.split("/")[-1]
             
-            # Skip geo targeting for now - will fix separately
-            # locations_to_target = target_locations or ["US"]  # Default to US only  
-            # await self._add_geo_targeting(
-            #     client, customer_id, campaign_id, locations_to_target
-            # )
+            # Add geo targeting if locations provided
+            if target_locations:
+                await self._add_geo_targeting(
+                    client, customer_id, campaign_id, target_locations
+                )
                 
             # Add language targeting if provided
             if target_languages:
@@ -154,33 +197,48 @@ class CampaignTools:
     async def _add_geo_targeting(
         self, client: GoogleAdsClient, customer_id: str, campaign_id: str, locations: List[str]
     ) -> None:
-        """Add geographic targeting to a campaign."""
+        """Add geographic targeting to a campaign.
+
+        Accepts either numeric geo target constant IDs (e.g. '2036' for Australia)
+        or location names (e.g. 'Australia') which will be resolved via the API.
+        """
         campaign_criterion_service = client.get_service("CampaignCriterionService")
-        geo_target_constant_service = client.get_service("GeoTargetConstantService")
-        
+
         operations = []
-        
+
         for location in locations:
-            # Search for location
-            gtc_query = f"""
-                SELECT geo_target_constant.id, geo_target_constant.name
-                FROM geo_target_constant
-                WHERE geo_target_constant.name = '{sanitize_gaql_string(location)}'
-                    AND geo_target_constant.status = 'ENABLED'
-            """
-            
-            # Use the correct method for API v21
-            gtc_response = geo_target_constant_service.search_geo_target_constants(query=gtc_query)
-            
-            for row in gtc_response:
+            location = str(location).strip()
+
+            if location.isdigit():
+                # Numeric ID — use directly as geo target constant
+                geo_target_resource = f"geoTargetConstants/{location}"
                 operation = client.get_type("CampaignCriterionOperation")
                 criterion = operation.create
                 criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
-                criterion.location.geo_target_constant = row.geo_target_constant.resource_name
+                criterion.location.geo_target_constant = geo_target_resource
                 criterion.negative = False
                 operations.append(operation)
-                break
-                
+            else:
+                # Name-based lookup via suggest_geo_target_constants
+                geo_target_constant_service = client.get_service("GeoTargetConstantService")
+
+                gtc_request = client.get_type("SuggestGeoTargetConstantsRequest")
+                gtc_request.locale = "en"
+                gtc_request.location_names.names.append(sanitize_gaql_string(location))
+
+                gtc_response = geo_target_constant_service.suggest_geo_target_constants(
+                    request=gtc_request
+                )
+
+                for suggestion in gtc_response.geo_target_constant_suggestions:
+                    operation = client.get_type("CampaignCriterionOperation")
+                    criterion = operation.create
+                    criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
+                    criterion.location.geo_target_constant = suggestion.geo_target_constant.resource_name
+                    criterion.negative = False
+                    operations.append(operation)
+                    break  # Use the first (best) match
+
         if operations:
             campaign_criterion_service.mutate_campaign_criteria(
                 customer_id=customer_id,
@@ -193,18 +251,23 @@ class CampaignTools:
         """Add language targeting to a campaign."""
         campaign_criterion_service = client.get_service("CampaignCriterionService")
         
-        # Language codes mapping
+        # Language codes mapping (accepts full names or ISO 639-1 codes)
         language_map = {
-            "English": "1000",  # English
-            "Spanish": "1003",  # Spanish
-            "French": "1002",   # French
-            "German": "1001",   # German
-            "Italian": "1004",  # Italian
-            "Portuguese": "1014", # Portuguese
-            "Dutch": "1010",    # Dutch
-            "Russian": "1023",  # Russian
-            "Japanese": "1005", # Japanese
-            "Chinese": "1017",  # Chinese (simplified)
+            "English": "1000", "en": "1000",
+            "Spanish": "1003", "es": "1003",
+            "French": "1002",  "fr": "1002",
+            "German": "1001",  "de": "1001",
+            "Italian": "1004", "it": "1004",
+            "Portuguese": "1014", "pt": "1014",
+            "Dutch": "1010",   "nl": "1010",
+            "Russian": "1023", "ru": "1023",
+            "Japanese": "1005", "ja": "1005",
+            "Chinese": "1017", "zh": "1017",
+            "Korean": "1012",  "ko": "1012",
+            "Arabic": "1019",  "ar": "1019",
+            "Hindi": "1023",   "hi": "1023",
+            "Thai": "1044",    "th": "1044",
+            "Vietnamese": "1040", "vi": "1040",
         }
         
         operations = []
