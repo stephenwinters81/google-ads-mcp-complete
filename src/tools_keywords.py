@@ -312,7 +312,8 @@ class KeywordTools:
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
-            # Build query
+            # Build query — ad_group_criterion does NOT support metrics
+            # with date segmentation. Use get_keyword_performance() for metrics.
             query = """
                 SELECT
                     ad_group_criterion.criterion_id,
@@ -324,26 +325,17 @@ class KeywordTools:
                     ad_group.id,
                     ad_group.name,
                     campaign.id,
-                    campaign.name,
-                    metrics.clicks,
-                    metrics.impressions,
-                    metrics.cost_micros,
-                    metrics.conversions
+                    campaign.name
                 FROM ad_group_criterion
                 WHERE ad_group_criterion.type = KEYWORD
             """
-            
+
             # Add filters
             conditions = []
             if ad_group_id:
                 conditions.append(f"ad_group.id = {ad_group_id}")
             if campaign_id:
                 conditions.append(f"campaign.id = {campaign_id}")
-                
-            if conditions:
-                query += " AND " + " AND ".join(conditions)
-                
-            query += " AND segments.date DURING LAST_30_DAYS"
                 
             response = googleads_service.search(
                 customer_id=customer_id, query=query
@@ -363,16 +355,7 @@ class KeywordTools:
                     "campaign_id": str(row.campaign.id),
                     "campaign_name": str(row.campaign.name)
                 }
-                
-                # Add performance metrics if available
-                if hasattr(row, 'metrics'):
-                    keyword_data["metrics"] = {
-                        "clicks": int(row.metrics.clicks),
-                        "impressions": int(row.metrics.impressions),
-                        "cost": micros_to_currency(row.metrics.cost_micros),
-                        "conversions": float(row.metrics.conversions)
-                    }
-                
+
                 keywords.append(keyword_data)
             
             return {

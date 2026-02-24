@@ -82,13 +82,13 @@ Credentials come from either `config.json` (see `config.example.json`) or enviro
 
 ### Campaign Hierarchy (updated 2026-02-24)
 
-#### Enabled Campaigns ($90/day total)
+#### Enabled Campaigns ($75/day total)
 
 | Campaign | ID | Budget | Bidding | Purpose |
 |---|---|---|---|---|
 | Appointment Bookings | 22432832085 | $25/day | TARGET_CPA $5 | General booking intent |
 | NCS Sydney | 23016371425 | $15/day | MAX_CONV | Nerve conduction studies |
-| Near Me | 23578008459 | $20/day | MAX_CONV | Local "near me" searches |
+| Near Me | 23578008459 | $5/day | MAX_CONV | Local "near me" searches (reduced from $20, 0 conv) |
 | Migraine | 23578226562 | $15/day | MAX_CONV | Migraine-specific keywords |
 | Tension Cluster | 23583571415 | $10/day | MAX_CONV | Tension & cluster headaches |
 | Cervicogenic | 23588213188 | $5/day | MAX_CONV | Cervicogenic headaches |
@@ -105,8 +105,9 @@ Credentials come from either `config.json` (see `config.example.json`) or enviro
 
 - **Call extensions:** 0279068356 (AU) on all 9 campaigns
 - **Audience signals (OBSERVATION):** 90400 (Affinity), 80144 (In-Market) on all campaigns
-- **Negative keywords (account-wide):** how to, cost, price, salary, course, training, jobs, free, diy, bronwyn jenkins neurologist, neurologist open today, naturopath for migraines, naturopath, mri, mri scan, neurosurgeon, neuropsychological, brain mapping, pediatric, paediatric, yoga, acupuncture, physio, physiotherapy, cefaly, emgality, nurtec, nerve decompression surgery, rami haddad, geriatrician, spinal neurologist, online consultation, ssri, best ssri, endone, simon rowe, miriam welgampola, welgampola, maitland, campbelltown, hotdoc
+- **Negative keywords (all campaigns):** how to, cost, price, salary, course, training, jobs, free, diy, bronwyn jenkins neurologist, neurologist open today, naturopath for migraines, naturopath, mri, mri scan, neurosurgeon, neuropsychological, brain mapping, pediatric, paediatric, yoga, acupuncture, physio, physiotherapy, cefaly, emgality, nurtec, nerve decompression surgery, rami haddad, geriatrician, spinal neurologist, online consultation, ssri, best ssri, endone, simon rowe, miriam welgampola, welgampola, maitland, campbelltown, hotdoc, headaches
 - **Near Me campaign-level negative:** cervicogenic (prevents cannibalization with Cervicogenic campaign)
+- **Near Me paused keyword:** "neurologist headache near me" (BROAD) — $39.95 wasted, 0 conversions
 
 ### Common URL Mistakes (always validate against sitemap)
 

@@ -420,7 +420,7 @@ class ExtensionTools:
         campaign_id: Optional[str] = None,
         extension_type: Optional[str] = None
     ) -> Dict[str, Any]:
-        """List extensions for a campaign or account.
+        """List extensions for a campaign or account using AssetService (v21+).
 
         Args:
             customer_id: The customer ID
@@ -436,71 +436,91 @@ class ExtensionTools:
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
 
+            # Map extension types to campaign_asset field_type values
+            type_to_field_type = {
+                "SITELINK": "SITELINK",
+                "CALLOUT": "CALLOUT",
+                "CALL": "CALL",
+                "STRUCTURED_SNIPPET": "STRUCTURED_SNIPPET",
+            }
+
             query = """
                 SELECT
-                    extension_feed_item.resource_name,
-                    extension_feed_item.id,
-                    extension_feed_item.extension_type,
-                    extension_feed_item.status,
-                    extension_feed_item.sitelink_feed_item.link_text,
-                    extension_feed_item.sitelink_feed_item.line1,
-                    extension_feed_item.sitelink_feed_item.line2,
-                    extension_feed_item.callout_feed_item.callout_text,
-                    extension_feed_item.call_feed_item.phone_number,
-                    extension_feed_item.call_feed_item.country_code,
-                    extension_feed_item.final_urls,
+                    campaign_asset.resource_name,
+                    campaign_asset.status,
+                    campaign_asset.field_type,
+                    asset.id,
+                    asset.name,
+                    asset.type,
+                    asset.sitelink_asset.link_text,
+                    asset.sitelink_asset.description1,
+                    asset.sitelink_asset.description2,
+                    asset.final_urls,
+                    asset.callout_asset.callout_text,
+                    asset.call_asset.phone_number,
+                    asset.call_asset.country_code,
+                    asset.structured_snippet_asset.header,
+                    asset.structured_snippet_asset.values,
                     campaign.name,
                     campaign.id
-                FROM extension_feed_item
+                FROM campaign_asset
             """
 
             conditions = []
             if campaign_id:
                 conditions.append(f"campaign.id = {campaign_id}")
-            if extension_type:
-                conditions.append(f"extension_feed_item.extension_type = '{extension_type}'")
+            if extension_type and extension_type in type_to_field_type:
+                conditions.append(
+                    f"campaign_asset.field_type = '{type_to_field_type[extension_type]}'"
+                )
 
             if conditions:
                 query += " WHERE " + " AND ".join(conditions)
-            
-            query += " ORDER BY extension_feed_item.extension_type, extension_feed_item.id"
-            
+
+            query += " ORDER BY campaign_asset.field_type"
+
             response = googleads_service.search(
                 customer_id=customer_id,
                 query=query
             )
-            
+
             extensions = []
             for row in response:
+                field_type = str(row.campaign_asset.field_type.name)
                 extension_data = {
-                    "id": str(row.extension_feed_item.id),
-                    "type": str(row.extension_feed_item.extension_type.name),
-                    "status": str(row.extension_feed_item.status.name),
+                    "id": str(row.asset.id),
+                    "type": field_type,
+                    "status": str(row.campaign_asset.status.name),
                     "campaign_name": str(row.campaign.name),
                     "campaign_id": str(row.campaign.id),
-                    "resource_name": row.extension_feed_item.resource_name,
+                    "resource_name": row.campaign_asset.resource_name,
                 }
-                
+
                 # Add type-specific data
-                if row.extension_feed_item.extension_type.name == "SITELINK":
+                if field_type == "SITELINK":
                     extension_data["sitelink"] = {
-                        "link_text": str(row.extension_feed_item.sitelink_feed_item.link_text),
-                        "description1": str(row.extension_feed_item.sitelink_feed_item.line1),
-                        "description2": str(row.extension_feed_item.sitelink_feed_item.line2),
-                        "url": row.extension_feed_item.final_urls[0] if row.extension_feed_item.final_urls else "",
+                        "link_text": str(row.asset.sitelink_asset.link_text),
+                        "description1": str(row.asset.sitelink_asset.description1),
+                        "description2": str(row.asset.sitelink_asset.description2),
+                        "url": row.asset.final_urls[0] if row.asset.final_urls else "",
                     }
-                elif row.extension_feed_item.extension_type.name == "CALLOUT":
+                elif field_type == "CALLOUT":
                     extension_data["callout"] = {
-                        "text": str(row.extension_feed_item.callout_feed_item.callout_text),
+                        "text": str(row.asset.callout_asset.callout_text),
                     }
-                elif row.extension_feed_item.extension_type.name == "CALL":
+                elif field_type == "CALL":
                     extension_data["call"] = {
-                        "phone_number": str(row.extension_feed_item.call_feed_item.phone_number),
-                        "country_code": str(row.extension_feed_item.call_feed_item.country_code),
+                        "phone_number": str(row.asset.call_asset.phone_number),
+                        "country_code": str(row.asset.call_asset.country_code),
                     }
-                
+                elif field_type == "STRUCTURED_SNIPPET":
+                    extension_data["structured_snippet"] = {
+                        "header": str(row.asset.structured_snippet_asset.header),
+                        "values": list(row.asset.structured_snippet_asset.values),
+                    }
+
                 extensions.append(extension_data)
-            
+
             return {
                 "success": True,
                 "campaign_id": campaign_id,
@@ -508,7 +528,7 @@ class ExtensionTools:
                 "extensions": extensions,
                 "count": len(extensions),
             }
-            
+
         except GoogleAdsException as e:
             logger.error(f"Failed to list extensions: {e}")
             raise
