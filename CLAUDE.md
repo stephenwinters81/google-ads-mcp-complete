@@ -120,3 +120,16 @@ Credentials come from either `config.json` (see `config.example.json`) or enviro
 - Pause campaign if CPA > $20 after 14 days
 - Reduce budget 50% if 0 conversions after 14 days
 - Star search term: "private neurologist sydney" ($0.93 CPA, 200% conv rate)
+- **Never make keyword pause decisions on less than 30 days of data** — 7-day windows can be misleading (see 2026-02-25 review)
+
+### Campaign Reviews
+
+Review files are stored in `reviews/` with the naming convention `YYYY-MM-DD-campaign-review.md`. Each review contains:
+- Full 7-day and 30-day performance data for all campaigns
+- Keyword-level analysis with Quality Scores
+- Search terms audit with waste identification
+- Changes made during the review (with resource IDs)
+- Lessons learned and next review checkpoint
+
+**Reviews on file:**
+- `reviews/2026-02-25-campaign-review.md` — Post-optimization check. Key finding: 7-day data nearly led to pausing "nerve specialist sydney" (NCS) which had 8 conv at $4.25 CPA over 30 days. Paused "cura medical specialists" in NCS (0 conv). Added "australia" negative to Migraine. Added cranial/biopsy/brain surgeon/facial nerve negatives to NCS. Next review: March 4-8.
