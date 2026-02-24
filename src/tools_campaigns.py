@@ -93,7 +93,7 @@ class CampaignTools:
                 channel_subtype_enum = client.enums.AdvertisingChannelSubTypeEnum
                 campaign.advertising_channel_sub_type = channel_subtype_enum.SHOPPING_COMPARISON_LISTING_ADS
             
-            # Set bidding strategy (API v21 compatible)
+            # Set bidding strategy (API v23 compatible)
             strategy = bidding_strategy.upper() if bidding_strategy else "MAXIMIZE_CLICKS"
 
             if strategy == "MANUAL_CPC":
@@ -103,24 +103,25 @@ class CampaignTools:
                 manual_cpc.enhanced_cpc_enabled = True
                 campaign.manual_cpc = manual_cpc
             elif strategy == "MAXIMIZE_CLICKS":
-                campaign.maximize_clicks = client.get_type("MaximizeClicks")
+                # v23: maximize_clicks renamed to target_spend
+                campaign.target_spend = client.get_type("TargetSpend")
             elif strategy == "MAXIMIZE_CONVERSIONS":
                 max_conv = client.get_type("MaximizeConversions")
                 if target_cpa_micros:
                     max_conv.target_cpa_micros = target_cpa_micros
                 campaign.maximize_conversions = max_conv
             elif strategy == "TARGET_CPA":
-                max_conv = client.get_type("MaximizeConversions")
+                target_cpa = client.get_type("TargetCpa")
                 if target_cpa_micros:
-                    max_conv.target_cpa_micros = target_cpa_micros
-                campaign.maximize_conversions = max_conv
+                    target_cpa.target_cpa_micros = target_cpa_micros
+                campaign.target_cpa = target_cpa
             elif strategy == "MAXIMIZE_CONVERSION_VALUE":
                 campaign.maximize_conversion_value = client.get_type("MaximizeConversionValue")
             elif strategy == "TARGET_ROAS":
-                max_val = client.get_type("MaximizeConversionValue")
+                target_roas_obj = client.get_type("TargetRoas")
                 if target_roas:
-                    max_val.target_roas = target_roas
-                campaign.maximize_conversion_value = max_val
+                    target_roas_obj.target_roas = target_roas
+                campaign.target_roas = target_roas_obj
             elif strategy == "TARGET_IMPRESSION_SHARE":
                 tis = client.get_type("TargetImpressionShare")
                 tis.location = client.enums.TargetImpressionShareLocationEnum.ANYWHERE_ON_PAGE
@@ -296,9 +297,12 @@ class CampaignTools:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         bidding_strategy: Optional[str] = None,
+        target_search_network: Optional[bool] = None,
+        target_cpa_micros: Optional[int] = None,
+        target_roas: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Update campaign settings.
-        
+
         Args:
             customer_id: The customer ID
             campaign_id: The campaign ID to update
@@ -306,7 +310,8 @@ class CampaignTools:
             status: New campaign status (ENABLED, PAUSED, REMOVED)
             start_date: New start date (YYYY-MM-DD format)
             end_date: New end date (YYYY-MM-DD format)
-            bidding_strategy: Portfolio bidding strategy resource name (e.g., customers/123/biddingStrategies/456)
+            bidding_strategy: Standard strategy name (MAXIMIZE_CONVERSIONS, TARGET_CPA, etc.) or portfolio resource name
+            target_search_network: Include Google Search Partners (true/false)
         """
         try:
             customer_id = validate_customer_id(customer_id)
@@ -343,10 +348,61 @@ class CampaignTools:
             if end_date is not None:
                 campaign.end_date = parse_date(end_date).strftime("%Y%m%d")
                 update_mask.append("end_date")
-                
+
+            if target_search_network is not None:
+                campaign.network_settings.target_search_network = target_search_network
+                update_mask.append("network_settings.target_search_network")
+
             if bidding_strategy is not None:
-                campaign.bidding_strategy = bidding_strategy
-                update_mask.append("bidding_strategy")
+                strategy = bidding_strategy.upper()
+                # Google Ads API v23 field names and subfield FieldMask paths.
+                # Proto-plus requires subfield paths — using a parent message
+                # field alone causes FIELD_HAS_SUBFIELDS error.
+                STANDARD_STRATEGIES = {
+                    "MANUAL_CPC", "ENHANCED_CPC", "MAXIMIZE_CLICKS",
+                    "MAXIMIZE_CONVERSIONS", "TARGET_CPA",
+                    "MAXIMIZE_CONVERSION_VALUE", "TARGET_ROAS",
+                    "TARGET_IMPRESSION_SHARE",
+                }
+                if strategy in STANDARD_STRATEGIES:
+                    if strategy == "MANUAL_CPC":
+                        campaign.manual_cpc.enhanced_cpc_enabled = False
+                        update_mask.append("manual_cpc.enhanced_cpc_enabled")
+                    elif strategy == "ENHANCED_CPC":
+                        campaign.manual_cpc.enhanced_cpc_enabled = True
+                        update_mask.append("manual_cpc.enhanced_cpc_enabled")
+                    elif strategy == "MAXIMIZE_CLICKS":
+                        # v23: maximize_clicks renamed to target_spend
+                        campaign.target_spend.target_spend_micros = 0
+                        update_mask.append("target_spend.target_spend_micros")
+                    elif strategy == "MAXIMIZE_CONVERSIONS":
+                        cpa = target_cpa_micros if target_cpa_micros else 0
+                        campaign.maximize_conversions.target_cpa_micros = cpa
+                        update_mask.append("maximize_conversions.target_cpa_micros")
+                    elif strategy == "TARGET_CPA":
+                        cpa = target_cpa_micros if target_cpa_micros else 0
+                        campaign.target_cpa.target_cpa_micros = cpa
+                        update_mask.append("target_cpa.target_cpa_micros")
+                    elif strategy == "MAXIMIZE_CONVERSION_VALUE":
+                        roas = target_roas if target_roas else 0
+                        campaign.maximize_conversion_value.target_roas = roas
+                        update_mask.append("maximize_conversion_value.target_roas")
+                    elif strategy == "TARGET_ROAS":
+                        roas = target_roas if target_roas else 0
+                        campaign.target_roas.target_roas = roas
+                        update_mask.append("target_roas.target_roas")
+                    elif strategy == "TARGET_IMPRESSION_SHARE":
+                        loc_enum = client.enums.TargetImpressionShareLocationEnum
+                        campaign.target_impression_share.location = loc_enum.ANYWHERE_ON_PAGE
+                        campaign.target_impression_share.location_fraction_micros = 500000
+                        campaign.target_impression_share.cpc_bid_ceiling_micros = 10000000
+                        update_mask.append("target_impression_share.location")
+                        update_mask.append("target_impression_share.location_fraction_micros")
+                        update_mask.append("target_impression_share.cpc_bid_ceiling_micros")
+                else:
+                    # Assume it's a portfolio bidding strategy resource name
+                    campaign.bidding_strategy = bidding_strategy
+                    update_mask.append("bidding_strategy")
                 
             # Set the update mask
             campaign_operation.update_mask.CopyFrom(
@@ -467,8 +523,6 @@ class CampaignTools:
                     campaign_budget.amount_micros,
                     campaign_budget.delivery_method,
                     campaign.bidding_strategy_type,
-                    campaign.start_date,
-                    campaign.end_date,
                     campaign.network_settings.target_google_search,
                     campaign.network_settings.target_search_network,
                     campaign.network_settings.target_partner_search_network,
@@ -478,8 +532,7 @@ class CampaignTools:
                     metrics.cost_micros,
                     metrics.conversions,
                     metrics.average_cpc,
-                    metrics.ctr,
-                    metrics.conversions
+                    metrics.ctr
                 FROM campaign
                 WHERE campaign.id = {campaign_id}
                     AND segments.date DURING LAST_30_DAYS
@@ -504,10 +557,6 @@ class CampaignTools:
                             "delivery_method": row.campaign_budget.delivery_method.name,
                         },
                         "bidding_strategy": row.campaign.bidding_strategy_type.name,
-                        "dates": {
-                            "start": row.campaign.start_date,
-                            "end": row.campaign.end_date,
-                        },
                         "network_settings": {
                             "google_search": row.campaign.network_settings.target_google_search,
                             "search_network": row.campaign.network_settings.target_search_network,

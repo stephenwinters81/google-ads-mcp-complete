@@ -154,6 +154,9 @@ class GoogleAdsTools:
                     "start_date": {"type": "string"},
                     "end_date": {"type": "string"},
                     "bidding_strategy": {"type": "string"},
+                    "target_search_network": {"type": "boolean", "description": "Include Google Search Partners (true/false)"},
+                    "target_cpa_micros": {"type": "number", "description": "Target CPA in micros (for TARGET_CPA / MAXIMIZE_CONVERSIONS strategies)"},
+                    "target_roas": {"type": "number", "description": "Target ROAS as a float (e.g. 3.5 for 350%) (for TARGET_ROAS strategy)"},
                 },
             },
             "pause_campaign": {
