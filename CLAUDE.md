@@ -73,3 +73,49 @@ Credentials come from either `config.json` (see `config.example.json`) or enviro
 - Ruff rules: E, F, I, N, W
 - mypy with `disallow_untyped_defs = true` — all functions need type annotations
 - Async functions throughout (MCP server is async)
+
+## Client: CURA Medical Specialists
+
+- **Customer ID:** `4611756192`
+- **Website:** https://curaspecialists.com.au
+- **Practice:** Neurology specialists in Sydney — Drummoyne, Nepean/Penrith, Gregory Hills
+
+### Campaign Hierarchy (updated 2026-02-24)
+
+#### Enabled Campaigns ($90/day total)
+
+| Campaign | ID | Budget | Bidding | Purpose |
+|---|---|---|---|---|
+| Appointment Bookings | 22432832085 | $25/day | TARGET_CPA $5 | General booking intent |
+| NCS Sydney | 23016371425 | $15/day | MAX_CONV | Nerve conduction studies |
+| Near Me | 23578008459 | $20/day | MAX_CONV | Local "near me" searches |
+| Migraine | 23578226562 | $15/day | MAX_CONV | Migraine-specific keywords |
+| Tension Cluster | 23583571415 | $10/day | MAX_CONV | Tension & cluster headaches |
+| Cervicogenic | 23588213188 | $5/day | MAX_CONV | Cervicogenic headaches |
+
+#### Paused Campaigns
+
+| Campaign | ID | Budget | Reason Paused |
+|---|---|---|---|
+| Emma Harrison Penrith | 22644007845 | $3/day | Low volume / optimization |
+| Migraine Ads | 23081715570 | $3/day | High CPA ($197, 0 conversions) |
+| Local Near Me - High Intent | 23588589252 | $10/day | 0 impressions — low search volume, keywords to be moved to Appointment Bookings |
+
+### Account-Wide Settings
+
+- **Call extensions:** 0279068356 (AU) on all 9 campaigns
+- **Audience signals (OBSERVATION):** 90400 (Affinity), 80144 (In-Market) on all campaigns
+- **Negative keywords (account-wide):** how to, cost, price, salary, course, training, jobs, free, diy, bronwyn jenkins neurologist, neurologist open today, naturopath for migraines, naturopath, mri, mri scan, neurosurgeon, neuropsychological, brain mapping, pediatric, paediatric, yoga, acupuncture, physio, physiotherapy, cefaly, emgality, nurtec, nerve decompression surgery, rami haddad, geriatrician, spinal neurologist, online consultation, ssri, best ssri, endone, simon rowe, miriam welgampola, welgampola, maitland, campbelltown, hotdoc
+- **Near Me campaign-level negative:** cervicogenic (prevents cannibalization with Cervicogenic campaign)
+
+### Common URL Mistakes (always validate against sitemap)
+
+- `/specialists` does NOT exist → use `/doctors`
+- `/medicare-rebates` does NOT exist → use `/fees`
+- `/locations/penrith` does NOT exist → use `/locations/nepean-penrith`
+
+### Optimization Review Criteria (Week 2+)
+
+- Pause campaign if CPA > $20 after 14 days
+- Reduce budget 50% if 0 conversions after 14 days
+- Star search term: "private neurologist sydney" ($0.93 CPA, 200% conv rate)
