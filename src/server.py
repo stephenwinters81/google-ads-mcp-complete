@@ -83,7 +83,13 @@ class GoogleAdsMCPServer:
                 if hasattr(e, "__class__") and e.__class__.__name__ == "GoogleAdsException":
                     try:
                         error_details = self.error_handler.format_error_response(e)
+                        error_response["error_details"] = error_details.get("errors", [])
                         error_response["error_code"] = error_details.get("error_code", "UNKNOWN")
+                        error_response["request_id"] = error_details.get("request_id")
+                        # Include the first error message for quick diagnosis
+                        if error_details.get("errors"):
+                            first_err = error_details["errors"][0]
+                            error_response["error"] = f"{first_err.get('type', 'UNKNOWN')}: {first_err.get('message', str(e))}"
                     except Exception:
                         logger.warning("Failed to format Google Ads error", exc_info=True)
                     

@@ -44,7 +44,7 @@ class ReportingTools:
             if not metrics:
                 metrics = [
                     "clicks", "impressions", "cost_micros", "conversions",
-                    "ctr", "average_cpc", "conversion_rate", "cost_per_conversion"
+                    "ctr", "average_cpc", "cost_per_conversion"
                 ]
             else:
                 metrics = validate_metrics(metrics)

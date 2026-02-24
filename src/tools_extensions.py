@@ -349,7 +349,7 @@ class ExtensionTools:
         country_code: str = "US",
         call_only: bool = False
     ) -> Dict[str, Any]:
-        """Create call extensions for a campaign.
+        """Create call extensions for a campaign using AssetService (v21).
 
         Args:
             customer_id: The customer ID
@@ -362,42 +362,54 @@ class ExtensionTools:
             customer_id = validate_customer_id(customer_id)
             campaign_id = validate_numeric_id(campaign_id, "campaign_id")
             client = self.auth_manager.get_client(customer_id)
-            extension_feed_item_service = client.get_service("ExtensionFeedItemService")
-            
-            # Create call extension
-            extension_feed_item_operation = client.get_type("ExtensionFeedItemOperation")
-            extension_feed_item = extension_feed_item_operation.create
-            
-            # Set extension type
-            extension_feed_item.extension_type = client.enums.ExtensionTypeEnum.CALL
-            
-            # Set call feed item
-            call_feed_item = extension_feed_item.call_feed_item
-            call_feed_item.phone_number = phone_number
-            call_feed_item.country_code = country_code
-            call_feed_item.call_tracking_enabled = True
-            call_feed_item.call_conversion_action = ""  # Can be set if conversion tracking is needed
-            call_feed_item.call_conversion_tracking_disabled = False
-            
-            # Set targeted campaign
-            extension_feed_item.targeted_campaign = client.get_service("CampaignService").campaign_path(
+            asset_service = client.get_service("AssetService")
+            campaign_asset_service = client.get_service("CampaignAssetService")
+
+            # Step 1: Create call asset
+            asset_operation = client.get_type("AssetOperation")
+            asset = asset_operation.create
+            asset.name = f"Call: {phone_number}"
+
+            call_asset = client.get_type("CallAsset")
+            call_asset.phone_number = phone_number
+            call_asset.country_code = country_code
+            call_asset.call_conversion_reporting_state = (
+                client.enums.CallConversionReportingStateEnum.USE_ACCOUNT_LEVEL_CALL_CONVERSION_ACTION
+            )
+
+            asset.call_asset = call_asset
+            asset.type_ = client.enums.AssetTypeEnum.CALL
+
+            asset_response = asset_service.mutate_assets(
+                customer_id=customer_id,
+                operations=[asset_operation]
+            )
+
+            asset_resource_name = asset_response.results[0].resource_name
+
+            # Step 2: Link asset to campaign
+            campaign_asset_operation = client.get_type("CampaignAssetOperation")
+            campaign_asset = campaign_asset_operation.create
+            campaign_asset.campaign = client.get_service("CampaignService").campaign_path(
                 customer_id, campaign_id
             )
-            
-            # Execute operation
-            response = extension_feed_item_service.mutate_extension_feed_items(
+            campaign_asset.asset = asset_resource_name
+            campaign_asset.field_type = client.enums.AssetFieldTypeEnum.CALL
+
+            campaign_asset_service.mutate_campaign_assets(
                 customer_id=customer_id,
-                operations=[extension_feed_item_operation]
+                operations=[campaign_asset_operation]
             )
-            
+
             return {
                 "success": True,
                 "campaign_id": campaign_id,
                 "phone_number": phone_number,
                 "country_code": country_code,
-                "resource_name": response.results[0].resource_name,
+                "asset_resource_name": asset_resource_name,
+                "asset_id": asset_resource_name.split("/")[-1],
             }
-            
+
         except GoogleAdsException as e:
             logger.error(f"Failed to create call extension: {e}")
             raise

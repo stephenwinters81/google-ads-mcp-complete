@@ -373,77 +373,97 @@ class AdTools:
                 status = validate_enum(status, AD_STATUSES, "status")
 
             client = self.auth_manager.get_client(customer_id)
-            ad_group_ad_service = client.get_service("AdGroupAdService")
-            
-            # Create update operation
-            ad_group_ad_operation = client.get_type("AdGroupAdOperation")
-            ad_group_ad = ad_group_ad_operation.update
-            
-            # Set the ad resource name
-            ad_group_ad.resource_name = client.get_service("AdGroupAdService").ad_group_ad_path(
-                customer_id, ad_group_id, ad_id
-            )
-            
-            # Update fields based on what's provided
             from google.protobuf.field_mask_pb2 import FieldMask
-            update_mask = FieldMask()
-            
-            # Update status if provided
+
+            updated_fields = []
+            results = []
+
+            # 1) Update status via AdGroupAdService (status lives on the AdGroupAd)
             if status:
+                ad_group_ad_service = client.get_service("AdGroupAdService")
+                ad_group_ad_operation = client.get_type("AdGroupAdOperation")
+                ad_group_ad = ad_group_ad_operation.update
+                ad_group_ad.resource_name = ad_group_ad_service.ad_group_ad_path(
+                    customer_id, ad_group_id, ad_id
+                )
+
+                status_mask = FieldMask()
                 if status.upper() == "ENABLED":
                     ad_group_ad.status = client.enums.AdGroupAdStatusEnum.ENABLED
                 elif status.upper() == "PAUSED":
                     ad_group_ad.status = client.enums.AdGroupAdStatusEnum.PAUSED
-                update_mask.paths.append("status")
-            
-            # Update ad content if provided (for responsive search ads)
-            if headlines or descriptions or final_urls or path1 is not None or path2 is not None:
+                status_mask.paths.append("status")
+                ad_group_ad_operation.update_mask = status_mask
+
+                response = ad_group_ad_service.mutate_ad_group_ads(
+                    customer_id=customer_id,
+                    operations=[ad_group_ad_operation]
+                )
+                updated_fields.append("status")
+                results.append(response.results[0].resource_name)
+
+            # 2) Update ad content via AdService (content lives on the Ad itself)
+            has_content_update = (
+                headlines or descriptions or final_urls
+                or path1 is not None or path2 is not None
+            )
+            if has_content_update:
+                ad_service = client.get_service("AdService")
+                ad_operation = client.get_type("AdOperation")
+                ad = ad_operation.update
+                ad.resource_name = ad_service.ad_path(customer_id, ad_id)
+
+                content_mask = FieldMask()
+
+                if final_urls:
+                    ad.final_urls.clear()
+                    ad.final_urls.extend(final_urls)
+                    content_mask.paths.append("final_urls")
+                    updated_fields.append("final_urls")
+
                 if headlines:
-                    ad_group_ad.ad.responsive_search_ad.headlines.clear()
-                    for i, headline in enumerate(headlines[:15]):  # Max 15 headlines
+                    ad.responsive_search_ad.headlines.clear()
+                    for headline in headlines[:15]:
                         headline_asset = client.get_type("AdTextAsset")
                         headline_asset.text = headline
-                        ad_group_ad.ad.responsive_search_ad.headlines.append(headline_asset)
-                    update_mask.paths.append("ad.responsive_search_ad.headlines")
-                
+                        ad.responsive_search_ad.headlines.append(headline_asset)
+                    content_mask.paths.append("responsive_search_ad.headlines")
+                    updated_fields.append("responsive_search_ad.headlines")
+
                 if descriptions:
-                    ad_group_ad.ad.responsive_search_ad.descriptions.clear()
-                    for i, description in enumerate(descriptions[:4]):  # Max 4 descriptions
+                    ad.responsive_search_ad.descriptions.clear()
+                    for description in descriptions[:4]:
                         description_asset = client.get_type("AdTextAsset")
                         description_asset.text = description
-                        ad_group_ad.ad.responsive_search_ad.descriptions.append(description_asset)
-                    update_mask.paths.append("ad.responsive_search_ad.descriptions")
-                
-                if final_urls:
-                    ad_group_ad.ad.final_urls.clear()
-                    ad_group_ad.ad.final_urls.extend(final_urls)
-                    update_mask.paths.append("ad.final_urls")
-                
-                # Update display paths
+                        ad.responsive_search_ad.descriptions.append(description_asset)
+                    content_mask.paths.append("responsive_search_ad.descriptions")
+                    updated_fields.append("responsive_search_ad.descriptions")
+
                 if path1 is not None:
-                    ad_group_ad.ad.responsive_search_ad.path1 = path1
-                    update_mask.paths.append("ad.responsive_search_ad.path1")
-                
+                    ad.responsive_search_ad.path1 = path1
+                    content_mask.paths.append("responsive_search_ad.path1")
+                    updated_fields.append("responsive_search_ad.path1")
+
                 if path2 is not None:
-                    ad_group_ad.ad.responsive_search_ad.path2 = path2
-                    update_mask.paths.append("ad.responsive_search_ad.path2")
-            
-            # Set the update mask
-            ad_group_ad_operation.update_mask = update_mask
-            
-            # Execute the update
-            response = ad_group_ad_service.mutate_ad_group_ads(
-                customer_id=customer_id,
-                operations=[ad_group_ad_operation]
-            )
-            
+                    ad.responsive_search_ad.path2 = path2
+                    content_mask.paths.append("responsive_search_ad.path2")
+                    updated_fields.append("responsive_search_ad.path2")
+
+                ad_operation.update_mask = content_mask
+
+                response = ad_service.mutate_ads(
+                    customer_id=customer_id,
+                    operations=[ad_operation]
+                )
+                results.append(response.results[0].resource_name)
+
             return {
                 "success": True,
                 "ad_id": ad_id,
-                "updated_fields": list(update_mask.paths),
-                "resource_name": response.results[0].resource_name,
+                "updated_fields": updated_fields,
+                "resource_name": results[-1] if results else None,
             }
-            
+
         except GoogleAdsException as e:
             logger.error(f"Failed to update ad: {e}")
             raise
